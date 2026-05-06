@@ -11,11 +11,8 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const rows = (data ?? []).map((r: {
-    id: string; rating: number; comment: string | null; reviewer_name: string | null
-    created_at: string; flagged: boolean | null; user_id: string | null
-    providers: { name: string } | null
-  }) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (data ?? []).map((r: any) => ({
     id:            r.id,
     rating:        r.rating,
     comment:       r.comment,
