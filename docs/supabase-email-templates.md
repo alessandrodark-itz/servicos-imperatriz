@@ -14,7 +14,7 @@ Acesse **Authentication > Email Templates** no painel do Supabase e cole os temp
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirme seu cadastro</title>
+  <title>Seu código de verificação</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0d0d1a;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d1a;padding:40px 0;">
@@ -22,32 +22,30 @@ Acesse **Authentication > Email Templates** no painel do Supabase e cole os temp
       <td align="center">
         <table width="560" cellpadding="0" cellspacing="0" style="background:#16162a;border-radius:16px;overflow:hidden;border:1px solid rgba(127,119,221,0.3);">
           <tr>
-            <td style="background:#7F77DD;padding:32px;text-align:center;">
-              <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;">Serviços Imperatriz</h1>
-              <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">Conectando Imperatriz</p>
+            <td style="background:linear-gradient(135deg,#7F77DD 0%,#a855f7 100%);padding:32px;text-align:center;">
+              <h1 style="color:#fff;margin:0;font-size:26px;font-weight:800;letter-spacing:-0.5px;">Serviços Imperatriz</h1>
+              <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:13px;letter-spacing:1px;text-transform:uppercase;">Conectando Imperatriz</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:40px 32px;text-align:center;">
-              <div style="width:64px;height:64px;background:rgba(127,119,221,0.15);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;">
-                <span style="font-size:28px;">✉️</span>
+            <td style="padding:48px 32px 40px;text-align:center;">
+              <h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 10px;">Confirme seu e-mail</h2>
+              <p style="color:rgba(255,255,255,0.55);font-size:15px;line-height:1.6;margin:0 0 36px;">
+                Use o código abaixo para ativar sua conta.<br>
+                Ele é válido por <strong style="color:rgba(255,255,255,0.8);">24 horas</strong>.
+              </p>
+              <div style="background:rgba(127,119,221,0.12);border:2px solid rgba(127,119,221,0.45);border-radius:20px;padding:32px 48px;display:inline-block;margin-bottom:36px;">
+                <p style="color:rgba(255,255,255,0.45);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px;">Código de verificação</p>
+                <p style="color:#fff;font-size:44px;font-weight:900;letter-spacing:8px;margin:0;font-family:'Courier New',monospace;text-shadow:0 0 24px rgba(127,119,221,0.6);">{{ .Token }}</p>
               </div>
-              <h2 style="color:#fff;font-size:22px;margin:0 0 12px;">Confirme seu e-mail</h2>
-              <p style="color:rgba(255,255,255,0.65);font-size:15px;line-height:1.6;margin:0 0 32px;">
-                Olá! Você criou uma conta no Serviços Imperatriz.<br>
-                Clique no botão abaixo para ativar sua conta.
-              </p>
-              <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#7F77DD;color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:16px;font-weight:600;">
-                Ativar minha conta
-              </a>
-              <p style="color:rgba(255,255,255,0.35);font-size:12px;margin:24px 0 0;">
-                Este link expira em 24 horas. Se você não criou esta conta, ignore este e-mail.
+              <p style="color:rgba(255,255,255,0.3);font-size:12px;margin:0;line-height:1.7;">
+                Se você não criou esta conta, ignore este e-mail com segurança.
               </p>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;">
-              <p style="color:rgba(255,255,255,0.3);font-size:12px;margin:0;">
+            <td style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.07);text-align:center;">
+              <p style="color:rgba(255,255,255,0.25);font-size:12px;margin:0;">
                 © 2025 Serviços Imperatriz — Imperatriz, Maranhão
               </p>
             </td>

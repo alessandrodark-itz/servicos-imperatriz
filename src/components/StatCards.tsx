@@ -16,8 +16,7 @@ function useCountUp(target: number, duration: number, active: boolean) {
       setValue(Math.round(target * eased))
       if (progress < 1) requestAnimationFrame(raf)
     }
-    const id = requestAnimationFrame(raf)
-    return () => cancelAnimationFrame(id)
+    requestAnimationFrame(raf)
   }, [active, target, duration])
   return value
 }
@@ -30,9 +29,11 @@ const statDefs = [
     suffix: '+',
     format: (v: number) => `${v}`,
     label: 'Prestadores Ativos',
-    iconColor: 'text-[#7F77DD]',
-    iconBg: 'bg-[#7F77DD]/15',
-    border: 'border-[#7F77DD]/20',
+    iconGrad: 'from-violet-600 to-[#8A5CFF]',
+    glow: 'rgba(138,92,255,0.35)',
+    border: 'rgba(138,92,255,0.22)',
+    hoverBorder: 'rgba(138,92,255,0.5)',
+    valueColor: '#B18CFF',
   },
   {
     Icon: TrendingUp,
@@ -41,9 +42,11 @@ const statDefs = [
     suffix: '+',
     format: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1).replace('.', ',')}K` : `${v}`,
     label: 'Clientes Conectados',
-    iconColor: 'text-fuchsia-400',
-    iconBg: 'bg-fuchsia-500/15',
-    border: 'border-fuchsia-500/20',
+    iconGrad: 'from-fuchsia-600 to-pink-500',
+    glow: 'rgba(217,70,239,0.3)',
+    border: 'rgba(217,70,239,0.2)',
+    hoverBorder: 'rgba(217,70,239,0.45)',
+    valueColor: '#e879f9',
   },
   {
     Icon: Star,
@@ -52,34 +55,64 @@ const statDefs = [
     suffix: '',
     format: (v: number) => (v / 10).toFixed(1),
     label: 'Avaliação Média',
-    iconColor: 'text-yellow-400',
-    iconBg: 'bg-yellow-500/15',
-    border: 'border-yellow-500/20',
+    iconGrad: 'from-amber-400 to-yellow-500',
+    glow: 'rgba(251,191,36,0.3)',
+    border: 'rgba(251,191,36,0.2)',
+    hoverBorder: 'rgba(251,191,36,0.45)',
+    valueColor: '#fbbf24',
   },
 ]
 
-function StatCard({
-  stat,
-  active,
-}: {
-  stat: (typeof statDefs)[number]
-  active: boolean
-}) {
+function StatCard({ stat, active }: { stat: typeof statDefs[number]; active: boolean }) {
   const count = useCountUp(stat.target, stat.duration, active)
-  const { Icon, suffix, format, label, iconColor, iconBg, border } = stat
+  const [hovered, setHovered] = useState(false)
+  const { Icon, suffix, format, label, iconGrad, glow, border, hoverBorder, valueColor } = stat
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-2xl border ${border} bg-white/5 px-4 py-3 backdrop-blur-sm`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered
+          ? 'rgba(255,255,255,0.07)'
+          : 'rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(20px)',
+        border: `1px solid ${hovered ? hoverBorder : border}`,
+        boxShadow: hovered
+          ? `0 0 28px ${glow}, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`
+          : `0 0 0px transparent, 0 4px 16px rgba(0,0,0,0.2)`,
+        borderRadius: 20,
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+        cursor: 'default',
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+      }}
     >
-      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
-        <Icon className={`h-5 w-5 ${iconColor}`} />
+      {/* Icon */}
+      <div
+        className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${iconGrad}`}
+        style={{
+          boxShadow: hovered ? `0 0 18px ${glow}` : 'none',
+          transition: 'box-shadow 0.3s ease',
+        }}
+      >
+        <Icon className="h-5 w-5 text-white" />
       </div>
+
+      {/* Text */}
       <div>
-        <p className="text-lg font-black leading-none text-white">
+        <p
+          className="text-xl font-black leading-none tabular-nums"
+          style={{ color: valueColor, textShadow: hovered ? `0 0 20px ${glow}` : 'none', transition: 'text-shadow 0.3s ease' }}
+        >
           {format(count)}{suffix}
         </p>
-        <p className="mt-0.5 text-xs text-white/50">{label}</p>
+        <p className="mt-1 text-xs font-medium" style={{ color: 'rgba(169,163,201,0.65)' }}>
+          {label}
+        </p>
       </div>
     </div>
   )
@@ -93,24 +126,16 @@ export default function StatCards() {
     const el = ref.current
     if (!el) return
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setActive(true)
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.4 }
+      ([entry]) => { if (entry.isIntersecting) { setActive(true); obs.disconnect() } },
+      { threshold: 0.3 }
     )
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
 
   return (
-    <div
-      ref={ref}
-      className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3"
-    >
-      {statDefs.map((stat) => (
+    <div ref={ref} className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      {statDefs.map(stat => (
         <StatCard key={stat.label} stat={stat} active={active} />
       ))}
     </div>

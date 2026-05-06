@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Phone } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Phone, ExternalLink, Zap } from 'lucide-react'
 
 type AdItem = {
   id: string
@@ -15,201 +15,361 @@ type AdItem = {
   position: number
 }
 
-type Props = {
-  ads: AdItem[]
-}
+const INTERVAL = 5500
 
-const GAP = 16
-
-function AdCard({ ad }: { ad: AdItem }) {
+/* ─── Card ─────────────────────────────────────────────────── */
+function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
   const inner = (
-    <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f18] transition-all duration-300 hover:-translate-y-1 hover:border-[#7F77DD]/30 hover:shadow-[0_8px_32px_rgba(127,119,221,0.2)]">
-      {/* Image */}
-      <div className="relative h-52 flex-shrink-0 overflow-hidden">
-        <img
-          src={ad.image_url}
-          alt={ad.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-        {/* Patrocinado badge */}
-        <span className="absolute left-3 top-3 rounded-full bg-[#7F77DD]/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+    <div className="relative h-full w-full overflow-hidden" style={{ borderRadius: 26 }}>
+
+      {/* Imagem com parallax sutil */}
+      <img
+        src={ad.image_url}
+        alt={ad.title}
+        className="absolute inset-0 h-full w-full object-cover object-center"
+        style={{
+          transform: active ? 'scale(1.06)' : 'scale(1)',
+          transition: 'transform 6s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      />
+
+      {/* Overlay cinematográfico */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to top, rgba(5,1,20,0.97) 0%, rgba(5,1,20,0.65) 36%, rgba(5,1,20,0.2) 65%, rgba(5,1,20,0.04) 100%)',
+        }}
+      />
+
+      {/* Vignette lateral */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse at 50% 100%, transparent 35%, rgba(5,1,20,0.55) 100%)',
+        }}
+      />
+
+      {/* Badge PATROCINADO */}
+      <div className="absolute left-5 top-5 z-20">
+        <span
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-white"
+          style={{
+            background: 'rgba(138,92,255,0.22)',
+            backdropFilter: 'blur(14px)',
+            border: '1px solid rgba(138,92,255,0.5)',
+            boxShadow: '0 0 18px rgba(138,92,255,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+        >
+          <Zap className="h-2.5 w-2.5 fill-[#B18CFF] text-[#B18CFF]" />
           Patrocinado
         </span>
-        {/* Title overlay */}
-        <div className="absolute bottom-3 left-3 right-3">
-          <h3 className="truncate text-base font-bold text-white drop-shadow-lg">{ad.title}</h3>
-        </div>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 flex-col justify-between gap-3 p-4">
+      {/* Conteúdo inferior */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-6 sm:p-8">
+        <h3
+          className="mb-2 text-xl font-black tracking-tight text-white sm:text-2xl lg:text-[1.75rem]"
+          style={{ textShadow: '0 2px 24px rgba(0,0,0,0.9), 0 0 40px rgba(138,92,255,0.15)' }}
+        >
+          {ad.title}
+        </h3>
+
         {ad.description && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-white/60">{ad.description}</p>
+          <p className="mb-5 line-clamp-2 max-w-lg text-sm leading-relaxed text-white/60 sm:text-base">
+            {ad.description}
+          </p>
         )}
-        <div className="flex items-center justify-between gap-2">
+
+        <div className="flex flex-wrap items-center gap-3">
           {ad.button_text && (
-            <span className="inline-flex rounded-xl bg-[#7F77DD] px-4 py-1.5 text-xs font-semibold text-white shadow-[0_0_12px_rgba(127,119,221,0.4)]">
+            <span
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110"
+              style={{
+                background: 'linear-gradient(135deg, #7b2ff7 0%, #9b5cff 60%, #b47fff 100%)',
+                boxShadow: '0 0 28px rgba(138,92,255,0.6), 0 4px 16px rgba(0,0,0,0.45)',
+              }}
+            >
+              {ad.link_url && <ExternalLink className="h-3 w-3" />}
               {ad.button_text}
             </span>
           )}
+
           {ad.phone && (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-white/50">
-              <Phone className="h-3 w-3" />
+            <button
+              type="button"
+              onClick={e => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${ad.phone}` }}
+              className="flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold text-white/80 transition-all hover:text-white"
+              style={{
+                background: 'rgba(255,255,255,0.07)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.14)',
+              }}
+            >
+              <Phone className="h-3.5 w-3.5 text-[#B18CFF]" />
               {ad.phone}
-            </span>
+            </button>
           )}
         </div>
       </div>
+
+      {/* Borda glow */}
+      <div
+        className="pointer-events-none absolute inset-0 transition-all duration-700"
+        style={{
+          borderRadius: 26,
+          border: '1px solid rgba(138,92,255,0.28)',
+          boxShadow: active
+            ? '0 0 48px rgba(138,92,255,0.22), 0 0 0 1px rgba(138,92,255,0.1), inset 0 1px 0 rgba(255,255,255,0.07)'
+            : '0 0 20px rgba(138,92,255,0.06)',
+        }}
+      />
     </div>
   )
 
   if (ad.link_url) {
     return (
-      <a href={ad.link_url} target="_blank" rel="noreferrer" className="group block h-full">
+      <a href={ad.link_url} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
         {inner}
       </a>
     )
   }
-  return <div className="group h-full">{inner}</div>
+  return <div className="h-full w-full">{inner}</div>
 }
 
-export default function AdsCarousel({ ads }: Props) {
-  const [current, setCurrent] = useState(0)
+/* ─── Carousel ──────────────────────────────────────────────── */
+export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
+  const [current, setCurrent]   = useState(0)
   const [isPaused, setIsPaused] = useState(false)
-  const [slideW, setSlideW] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef<number | null>(null)
-  const currentRef = useRef(current)
+  const [progress, setProgress] = useState(0)
+  const touchStartX             = useRef<number | null>(null)
+  const currentRef              = useRef(current)
   currentRef.current = current
-
   const total = ads.length
 
-  // Measure slide width accounting for responsive peek
-  useEffect(() => {
-    const measure = () => {
-      if (!containerRef.current) return
-      const w = containerRef.current.offsetWidth
-      const isLg = window.innerWidth >= 1024
-      setSlideW(isLg ? Math.floor(w / 1.18) : w)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    if (containerRef.current) ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [])
+  const goTo = useCallback((index: number) => {
+    setCurrent(((index % total) + total) % total)
+    setProgress(0)
+  }, [total])
 
-  const goTo = useCallback(
-    (index: number) => setCurrent(((index % total) + total) % total),
-    [total]
-  )
-  const prev = useCallback(() => goTo(currentRef.current - 1), [goTo])
   const next = useCallback(() => goTo(currentRef.current + 1), [goTo])
+  const prev = useCallback(() => goTo(currentRef.current - 1), [goTo])
 
-  // Auto-advance
+  /* Auto-play */
   useEffect(() => {
-    if (isPaused || slideW === 0) return
-    const timer = setInterval(next, 3500)
-    return () => clearInterval(timer)
-  }, [isPaused, slideW, next])
+    if (isPaused) return
+    const t = setInterval(next, INTERVAL)
+    return () => clearInterval(t)
+  }, [isPaused, next])
 
-  // Touch swipe
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
+  /* Barra de progresso */
+  useEffect(() => {
+    setProgress(0)
+    if (isPaused) return
+    const step = 100 / (INTERVAL / 40)
+    const t = setInterval(() => setProgress(p => Math.min(p + step, 100)), 40)
+    return () => clearInterval(t)
+  }, [current, isPaused])
+
+  /* Offset circular */
+  function getOffset(i: number) {
+    let off = i - current
+    if (off > total / 2)  off -= total
+    if (off < -total / 2) off += total
+    return off
   }
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return
-    const diff = touchStartX.current - e.changedTouches[0].clientX
-    if (Math.abs(diff) > 48) {
-      diff > 0 ? next() : prev()
+
+  /* Estilos por posição */
+  function cardStyle(i: number): React.CSSProperties {
+    const off = getOffset(i)
+    const common: React.CSSProperties = {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: '15%',
+      width: '70%',
+      transition: 'transform 0.62s cubic-bezier(0.4,0,0.2,1), opacity 0.62s ease, filter 0.62s ease',
     }
+    if (off === 0) {
+      return { ...common, transform: 'translateX(0) scale(1)', opacity: 1, zIndex: 10, filter: 'none' }
+    }
+    if (Math.abs(off) === 1) {
+      return {
+        ...common,
+        transform: `translateX(${off > 0 ? 102 : -102}%) scale(0.84)`,
+        opacity: 0.35,
+        zIndex: 5,
+        filter: 'blur(2.5px) brightness(0.5) saturate(0.7)',
+      }
+    }
+    return {
+      ...common,
+      transform: `translateX(${off > 0 ? 260 : -260}%) scale(0.72)`,
+      opacity: 0,
+      zIndex: 0,
+      pointerEvents: 'none',
+    }
+  }
+
+  /* Touch */
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
+  const onTouchEnd   = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const d = touchStartX.current - e.changedTouches[0].clientX
+    if (Math.abs(d) > 44) d > 0 ? next() : prev()
     touchStartX.current = null
   }
 
-  if (!ads || ads.length === 0) return null
+  if (!ads.length) return null
 
   return (
-    <section className="py-8">
+    <section
+      className="py-10 select-none"
+      style={{ background: 'linear-gradient(180deg, #070114 0%, #05010d 100%)' }}
+    >
       <div className="mx-auto max-w-7xl px-4">
 
-        {/* Label */}
-        <div className="mb-5 flex items-center gap-3">
-          <span className="rounded-full bg-[#7F77DD]/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-[#7F77DD]">
-            Publicidade
+        {/* ── Header ── */}
+        <div className="mb-7 flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="h-5 w-[3px] rounded-full"
+              style={{ background: 'linear-gradient(180deg,#8A5CFF 0%,rgba(138,92,255,0.08) 100%)' }}
+            />
+            <span
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.25em]"
+              style={{
+                color: '#B18CFF',
+                background: 'rgba(138,92,255,0.1)',
+                border: '1px solid rgba(138,92,255,0.28)',
+                boxShadow: '0 0 14px rgba(138,92,255,0.12)',
+              }}
+            >
+              <Zap className="h-2.5 w-2.5 fill-current" />
+              Publicidade
+            </span>
+          </div>
+          <span className="text-sm font-medium" style={{ color: 'rgba(169,163,201,0.45)' }}>
+            Patrocinados
           </span>
-          <span className="text-sm font-semibold text-white/50">Patrocinados</span>
+          <div
+            className="ml-2 h-px flex-1"
+            style={{ background: 'linear-gradient(90deg,rgba(138,92,255,0.22) 0%,transparent 100%)' }}
+          />
         </div>
 
+        {/* ── Stage ── */}
         <div
           className="relative"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
-          {/* Carousel viewport */}
+          {/* Cards container */}
           <div
-            ref={containerRef}
-            className="overflow-hidden rounded-2xl"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
+            className="relative overflow-hidden"
+            style={{
+              height: 'clamp(210px, 40vw, 440px)',
+              borderRadius: 32,
+              /* glow ambiente */
+              boxShadow: '0 0 80px rgba(138,92,255,0.07)',
+            }}
           >
-            {/* Track */}
-            <div
-              className="flex"
-              style={{
-                gap: `${GAP}px`,
-                transform:
-                  slideW > 0
-                    ? `translateX(-${current * (slideW + GAP)}px)`
-                    : 'translateX(0)',
-                transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              {ads.map((ad) => (
-                <div
-                  key={ad.id}
-                  className="flex-shrink-0 w-full"
-                  style={slideW > 0 ? { width: slideW } : undefined}
-                >
-                  <AdCard ad={ad} />
+            {/* Glows laterais */}
+            <div className="pointer-events-none absolute -left-10 top-1/2 z-0 h-48 w-48 -translate-y-1/2 rounded-full opacity-25"
+              style={{ background: 'radial-gradient(circle,#8A5CFF,transparent 70%)', filter: 'blur(36px)' }} />
+            <div className="pointer-events-none absolute -right-10 top-1/2 z-0 h-48 w-48 -translate-y-1/2 rounded-full opacity-25"
+              style={{ background: 'radial-gradient(circle,#8A5CFF,transparent 70%)', filter: 'blur(36px)' }} />
+
+            {/* Cards desktop (3D) */}
+            <div className="hidden lg:block h-full">
+              {ads.map((ad, i) => (
+                <div key={ad.id} style={cardStyle(i)}>
+                  <AdCard ad={ad} active={i === current} />
                 </div>
               ))}
             </div>
+
+            {/* Card mobile (full width) */}
+            <div className="absolute inset-0 lg:hidden" style={{ zIndex: 10, borderRadius: 26, overflow: 'hidden' }}>
+              <AdCard ad={ads[current]} active />
+            </div>
           </div>
 
-          {/* Prev arrow */}
+          {/* ── Seta esquerda ── */}
           <button
             onClick={prev}
             aria-label="Anterior"
-            className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/70"
+            className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 sm:left-5 sm:h-12 sm:w-12"
+            style={{
+              background: 'rgba(7,1,20,0.7)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(138,92,255,0.32)',
+              boxShadow: '0 0 22px rgba(138,92,255,0.15), 0 4px 16px rgba(0,0,0,0.5)',
+            }}
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-5 w-5 text-white" strokeWidth={2.5} />
           </button>
 
-          {/* Next arrow */}
+          {/* ── Seta direita ── */}
           <button
             onClick={next}
             aria-label="Próximo"
-            className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/70"
+            className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 sm:right-5 sm:h-12 sm:w-12"
+            style={{
+              background: 'rgba(7,1,20,0.7)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(138,92,255,0.32)',
+              boxShadow: '0 0 22px rgba(138,92,255,0.15), 0 4px 16px rgba(0,0,0,0.5)',
+            }}
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-5 w-5 text-white" strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Dots */}
+        {/* ── Barras de progresso ── */}
         <div className="mt-5 flex items-center justify-center gap-2">
           {ads.map((_, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}
-              aria-label={`Ir para slide ${i + 1}`}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === current
-                  ? 'w-[22px] bg-[#7F77DD]'
-                  : 'w-2 bg-white/25 hover:bg-white/45'
-              }`}
-            />
+              aria-label={`Slide ${i + 1}`}
+              className="relative overflow-hidden rounded-full transition-all duration-400"
+              style={{
+                height: 3,
+                width: i === current ? 52 : 14,
+                background: 'rgba(138,92,255,0.18)',
+                transition: 'width 0.35s cubic-bezier(0.4,0,0.2,1)',
+              }}
+            >
+              {i === current && (
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full"
+                  style={{
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg, #8A5CFF, #B18CFF)',
+                    boxShadow: '0 0 8px rgba(138,92,255,0.9)',
+                    transition: 'width 0.04s linear',
+                  }}
+                />
+              )}
+            </button>
           ))}
         </div>
+
+        {/* Contador */}
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          <span className="text-xs font-bold tabular-nums" style={{ color: '#8A5CFF' }}>
+            {String(current + 1).padStart(2, '0')}
+          </span>
+          <span className="text-xs" style={{ color: 'rgba(169,163,201,0.25)' }}>/</span>
+          <span className="text-xs tabular-nums" style={{ color: 'rgba(169,163,201,0.35)' }}>
+            {String(total).padStart(2, '0')}
+          </span>
+        </div>
+
       </div>
     </section>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
@@ -11,7 +11,13 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createBrowser()
-  
+
+  const [nextPath, setNextPath] = useState('/')
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('next')
+    if (p) setNextPath(p)
+  }, [])
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -43,7 +49,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/')
+      router.push(nextPath)
       router.refresh()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ''

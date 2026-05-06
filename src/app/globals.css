@@ -40,6 +40,10 @@
   --shadow-glow-xl: var(--glow-xl);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -48,23 +52,37 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar custom */
+/* Premium text selection */
+::selection {
+  background: rgba(138,92,255,0.35);
+  color: #fff;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid rgba(138,92,255,0.6);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Premium scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface-1);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-4);
-  border-radius: 4px;
+  background: rgba(138,92,255,0.3);
+  border-radius: 99px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.5);
+  background: rgba(138,92,255,0.6);
 }
 
 /* Animações */
@@ -191,6 +209,66 @@ body {
 .animate-step-in {
   opacity: 0;
   animation: step-in 0.6s ease-out forwards;
+}
+
+/* ── Skeleton shimmer ── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(138,92,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 1.8s linear infinite;
+  border-radius: 8px;
+}
+
+/* ── Neon text glow ── */
+.text-glow-violet {
+  text-shadow: 0 0 20px rgba(138,92,255,0.6), 0 0 40px rgba(138,92,255,0.3);
+}
+
+/* ── Glass card ── */
+.glass-card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Neon button ── */
+.btn-neon {
+  background: linear-gradient(135deg, #7b2ff7, #8A5CFF);
+  box-shadow: 0 0 20px rgba(138,92,255,0.35);
+  transition: all 0.3s ease;
+}
+.btn-neon:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 0 32px rgba(138,92,255,0.55);
+}
+
+/* ── Page enter animation ── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: pageIn 0.5s ease-out both;
+}
+
+/* ── Number pulse ── */
+@keyframes numberPop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.animate-number-pop {
+  animation: numberPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
 }
 
 /* Swiper overrides for ads carousel */
