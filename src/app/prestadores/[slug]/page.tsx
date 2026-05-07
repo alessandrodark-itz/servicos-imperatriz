@@ -44,6 +44,37 @@ const getCachedProvider = cache(async function getDbProvider(slug: string) {
   } catch { return null }
 })
 
+/* ─── OG copy pool — neutro para homens, mulheres e empresas ─── */
+function pickOgCopy(slug: string, name: string, catName?: string) {
+  const hash = slug.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+
+  const titles = [
+    `${name} está online agora`,
+    `${name} responde no WhatsApp`,
+    `Agenda aberta • fale com ${name}`,
+    `${name}${catName ? ` • ${catName}` : ''} disponível agora`,
+    `Você ainda não viu esse perfil`,
+    `Esse perfil está fazendo sucesso`,
+    `Confira antes que a agenda encha`,
+    `${name} • perfil verificado aqui`,
+  ]
+
+  const descriptions = [
+    `Agenda aberta, responde rápido. Poucas pessoas chegaram antes de você — veja o perfil.`,
+    `Perfil verificado em Imperatriz. Contato direto no WhatsApp, sem complicação.`,
+    `Online agora com agenda disponível. Veja os serviços e chame direto.`,
+    `Todo mundo está mandando esse perfil. Veja por que antes de perguntar.`,
+    `Encontrou. Não deixa escapar — agenda aberta e resposta rápida garantida.`,
+    `Serviço top em Imperatriz. Perfil verificado, agenda aberta — chame agora.`,
+    `Esse perfil está circulando por aqui. Dê uma olhada antes que a agenda encha.`,
+    `Avaliações ótimas, resposta rápida. Contato direto pelo WhatsApp.`,
+  ]
+
+  const t = titles[hash % titles.length]
+  const d = descriptions[(hash + 3) % descriptions.length]
+  return { ogTitle: t, ogDesc: d }
+}
+
 /* ─── OG / SEO ─── */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
@@ -52,19 +83,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name   = provider.name ?? 'Prestador'
   const catId  = provider.categories?.[0] ?? provider.category_id
   const cat    = catId ? categories.find(c => c.id === catId || c.slug === catId) : null
-  const desc   = provider.description?.slice(0, 155)
-    ?? `${name}${cat ? ` • ${cat.name}` : ''} — Profissional verificado em Imperatriz/MA.`
   const imgs: string[] = (provider.images ?? []).filter(Boolean)
   const ogImg  = provider.avatar_url ?? imgs[0] ?? null
+
+  const { ogTitle, ogDesc } = pickOgCopy(slug, name, cat?.name)
+
   return {
     title: `${name}${cat ? ` • ${cat.name}` : ''} — Serviços Imperatriz`,
-    description: desc,
+    description: ogDesc,
     openGraph: {
-      title: name, description: desc, type: 'profile',
+      title: ogTitle,
+      description: ogDesc,
+      type: 'profile',
       ...(ogImg ? { images: [{ url: ogImg, width: 1200, height: 630, alt: name }] } : {}),
     },
     twitter: {
-      card: 'summary_large_image', title: name, description: desc,
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDesc,
       ...(ogImg ? { images: [ogImg] } : {}),
     },
   }
