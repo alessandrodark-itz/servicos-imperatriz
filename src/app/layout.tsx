@@ -20,8 +20,6 @@ const SITE_URL = "https://www.servitz.com.br";
 const OG_TITLE = "Serv-Itz — Encontre Profissionais de Confiança";
 const OG_DESCRIPTION =
   "Contrate profissionais verificados de forma rápida, segura e moderna em Imperatriz. Mais de 500 prestadores. Gratuito para clientes.";
-const OG_IMAGE = `${SITE_URL}/og-image.png`;
-
 export const viewport: Viewport = {
   themeColor: "#8A5CFF",
   width: "device-width",
@@ -66,15 +64,6 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     title: OG_TITLE,
     description: OG_DESCRIPTION,
-    images: [
-      {
-        url: OG_IMAGE,
-        width: 1200,
-        height: 630,
-        alt: "Serv-Itz — Encontre Profissionais de Confiança em Imperatriz",
-        type: "image/png",
-      },
-    ],
   },
 
   twitter: {
@@ -83,7 +72,6 @@ export const metadata: Metadata = {
     creator: "@servitz",
     title: OG_TITLE,
     description: OG_DESCRIPTION,
-    images: [OG_IMAGE],
   },
 
   manifest: "/manifest.json",
