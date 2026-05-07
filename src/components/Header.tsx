@@ -179,7 +179,7 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="group flex flex-shrink-0 items-center gap-2.5">
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden flex-shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_24px_rgba(138,92,255,0.6)]"
+              className="flex h-14 w-14 items-center justify-center rounded-xl overflow-hidden flex-shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_24px_rgba(138,92,255,0.6)]"
               style={{ boxShadow: '0 0 14px rgba(138,92,255,0.35)' }}
             >
               <img
