@@ -40,9 +40,12 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === '/admin/login') return NextResponse.next()
 
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     const token = request.cookies.get('admin_session')?.value
     if (!token || !(await verifyToken(token))) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+      }
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
@@ -51,5 +54,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*'],
 }
