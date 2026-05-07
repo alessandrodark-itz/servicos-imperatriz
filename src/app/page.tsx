@@ -8,6 +8,7 @@ import CategoryCard from '@/components/CategoryCard'
 import PhoneAnimation from '@/components/PhoneAnimation'
 import HowItWorks from '@/components/HowItWorks'
 import StatCards from '@/components/StatCards'
+import { InstallSection } from '@/components/InstallPrompt'
 import { categories, ads as mockAds, getFeaturedProviders } from '@/lib/mock-data'
 import { createAdmin } from '@/lib/supabase'
 import { Rocket } from 'lucide-react'
@@ -285,6 +286,11 @@ export default async function Home() {
         </section>
 
       </main>
+
+      {/* ══════════════════════════════════════════
+          INSTALL PWA SECTION
+      ══════════════════════════════════════════ */}
+      <InstallSection />
 
       <Footer />
     </div>

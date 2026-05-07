@@ -179,17 +179,23 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="group flex flex-shrink-0 items-center gap-2.5">
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_24px_rgba(138,92,255,0.6)]"
-              style={{
-                background: 'linear-gradient(135deg, #7b2ff7, #c084fc)',
-                boxShadow: '0 0 14px rgba(138,92,255,0.35)',
-              }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden flex-shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_24px_rgba(138,92,255,0.6)]"
+              style={{ boxShadow: '0 0 14px rgba(138,92,255,0.35)' }}
             >
-              <MapPin className="h-4.5 w-4.5 text-white" style={{ width: 18, height: 18 }} />
+              <img
+                src="/icons/logo.png"
+                alt="Serv-Itz"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement
+                  img.style.display = 'none'
+                  img.parentElement!.style.background = 'linear-gradient(135deg, #7b2ff7, #c084fc)'
+                }}
+              />
             </div>
             <span className="text-xl font-black tracking-tight">
-              <span className="text-white">Serviços</span>
-              <span style={{ color: '#8A5CFF' }}>Imperatriz</span>
+              <span className="text-white">Serv-</span>
+              <span style={{ color: '#8A5CFF' }}>Itz</span>
             </span>
           </Link>
 
