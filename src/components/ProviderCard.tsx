@@ -154,13 +154,13 @@ export default function ProviderCard({ provider, variant = 'default' }: Props) {
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-b from-[#130a20] to-[#0c0718] transition-all duration-300 hover:border-violet-500/35 hover:shadow-[0_8px_40px_rgba(138,92,255,0.2)] hover:-translate-y-1.5">
 
       {/* ── Image ── */}
-      <div className="relative aspect-video overflow-hidden">
+      <div className="relative h-28 sm:h-44 overflow-hidden">
         <img
           src={provider.image}
           alt={provider.name}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.08]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0718] via-[#0c0718]/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0718]/90 via-[#0c0718]/10 to-transparent" />
 
         {/* Top: category pill + heart */}
         <div className="absolute left-3 right-3 top-3 flex items-start justify-between">
