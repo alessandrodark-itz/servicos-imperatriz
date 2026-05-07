@@ -255,13 +255,13 @@ export default async function Home() {
               </Link>
             </div>
 
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {featuredProviders.slice(0, 4).map((provider) => (
                 <ProviderCard key={provider.id} provider={provider} variant="default" />
               ))}
 
               {/* CTA Card */}
-              <div className="col-span-2 lg:col-span-1 relative flex flex-col overflow-hidden rounded-2xl border border-[#7F77DD]/25 bg-gradient-to-b from-[#1a0f2e] to-[#0f0918] p-6">
+              <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[#7F77DD]/25 bg-gradient-to-b from-[#1a0f2e] to-[#0f0918] p-6">
                 <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#7F77DD]">
                   Seja um Prestador
                 </p>
