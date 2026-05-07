@@ -187,8 +187,8 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
       position: 'absolute',
       top: 0,
       bottom: 0,
-      left: '15%',
-      width: '70%',
+      left: 'var(--ads-card-left, 15%)',
+      width: 'var(--ads-card-width, 70%)',
       transition: 'transform 0.62s cubic-bezier(0.4,0,0.2,1), opacity 0.62s ease, filter 0.62s ease',
     }
     if (off === 0) {
@@ -272,7 +272,7 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
             className="relative overflow-hidden"
             style={{
               aspectRatio: '16/9',
-              maxHeight: 440,
+              maxHeight: 'var(--ads-max-height, 440px)',
               borderRadius: 32,
               boxShadow: '0 0 80px rgba(138,92,255,0.07)',
             }}
