@@ -498,9 +498,9 @@ export default function PrestadorDashboard() {
             </button>
             {data.slug && (
               <Link href={`/prestadores/${data.slug}`} target="_blank"
-                className="hidden items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/60 transition-all hover:bg-white/10 hover:text-white sm:flex">
+                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/60 transition-all hover:bg-white/10 hover:text-white">
                 <ExternalLink className="h-4 w-4" />
-                Ver perfil público
+                <span className="hidden sm:inline">Ver perfil público</span>
               </Link>
             )}
           </div>
