@@ -277,40 +277,80 @@ export default async function ProviderDetailPage({ params }: Props) {
                 borderRadius: '50%', background: 'rgba(219,39,119,0.07)', filter: 'blur(50px)', pointerEvents: 'none',
               }} />
 
-              {/* ── Mobile: banner de foto no topo ── */}
+              {/* ── Mobile: portrait card com borda neon (idêntico ao desktop) ── */}
               <div
-                className="sm:hidden relative overflow-hidden"
-                style={{ aspectRatio: '9/16', borderRadius: '24px 24px 0 0' }}
+                className="sm:hidden flex justify-center"
+                style={{ padding: '24px 24px 0' }}
               >
-                {p.avatarUrl ? (
-                  <img
-                    src={p.avatarUrl} alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                {/* WRAPPER EXTERNO: mesmo conic-gradient + overflow:hidden do desktop */}
+                <div
+                  className="photo-aura relative"
+                  style={{
+                    width: '58%',
+                    maxWidth: '210px',
+                    aspectRatio: '9/16',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  {/* Conic-gradient girando — igual ao desktop */}
+                  <div
+                    className="neon-spin"
+                    style={{
+                      position: 'absolute',
+                      width: '200%', height: '200%', top: '-50%', left: '-50%',
+                      background: 'conic-gradient(from 0deg, #7b2ff7 0%, #a855f7 14%, #ec4899 28%, #f43f5e 40%, #fb923c 52%, #facc15 60%, #06b6d4 70%, #3b82f6 82%, #8b5cf6 92%, #7b2ff7 100%)',
+                    }}
                   />
-                ) : (
+
+                  {/* WRAPPER INTERNO: inset 3px + overflow:hidden + border-radius correspondente */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '3px',
+                      borderRadius: '17px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {p.avatarUrl ? (
+                      <img
+                        src={p.avatarUrl} alt={p.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'linear-gradient(155deg, #1a0640, #4c1d95 55%, #6d28d9)',
+                        fontSize: '4.5rem', fontWeight: 900, color: '#fff',
+                      }}>{initials}</div>
+                    )}
+                    {/* Reflexo sutil — igual ao desktop */}
+                    <div style={{
+                      position: 'absolute', inset: 0, pointerEvents: 'none',
+                      background: 'linear-gradient(145deg, rgba(255,255,255,0.07) 0%, transparent 42%)',
+                    }} />
+                    {/* Fade no rodapé */}
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', pointerEvents: 'none',
+                      background: 'linear-gradient(0deg, rgba(8,2,24,0.88) 0%, transparent 100%)',
+                    }} />
+                  </div>
+
+                  {/* Online indicator — posicionado sobre o wrapper externo, igual ao desktop */}
                   <div style={{
-                    width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #1a0640, #4c1d95 55%, #6d28d9)',
-                    fontSize: '5rem', fontWeight: 900, color: '#fff',
-                  }}>{initials}</div>
-                )}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'linear-gradient(0deg, rgba(8,2,24,0.92) 0%, transparent 65%)',
-                }} />
-                {/* Online indicator mobile */}
-                <div style={{
-                  position: 'absolute', bottom: '12px', left: '16px',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'rgba(4,0,18,0.75)', backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(52,211,153,0.3)', borderRadius: '999px',
-                  padding: '5px 10px',
-                }}>
-                  <div className="dot-blink" style={{
-                    width: '7px', height: '7px', borderRadius: '50%', background: '#34d399',
-                    boxShadow: '0 0 8px rgba(52,211,153,1)', flexShrink: 0,
-                  }} />
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#34d399' }}>Online agora</span>
+                    position: 'absolute', bottom: '14px', left: '12px', zIndex: 10,
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: 'rgba(4,0,18,0.8)', backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(52,211,153,0.32)', borderRadius: '999px',
+                    padding: '6px 12px',
+                  }}>
+                    <div className="dot-blink" style={{
+                      width: '8px', height: '8px', borderRadius: '50%', background: '#34d399',
+                      boxShadow: '0 0 10px rgba(52,211,153,1)', flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#34d399' }}>Online agora</span>
+                  </div>
                 </div>
               </div>
 
