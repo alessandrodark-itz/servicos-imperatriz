@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#120630"/>
+      <stop offset="100%" stop-color="#05010a"/>
+    </radialGradient>
+    <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8A5CFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#8A5CFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#d946ef" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#d946ef" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="iconGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8A5CFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#8A5CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#e8e0ff"/>
+      <stop offset="100%" stop-color="#B18CFF"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8A5CFF"/>
+      <stop offset="100%" stop-color="#d946ef"/>
+    </linearGradient>
+    <filter id="blur1">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="blur2">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+    <filter id="logoGlow">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="roundedIcon">
+      <rect x="820" y="165" width="220" height="220" rx="44"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Ambient glows -->
+  <ellipse cx="280" cy="315" rx="400" ry="340" fill="url(#glow1)" filter="url(#blur1)" opacity="0.9"/>
+  <ellipse cx="980" cy="480" rx="260" ry="200" fill="url(#glow2)" filter="url(#blur2)" opacity="0.7"/>
+  <ellipse cx="930" cy="275" rx="200" ry="200" fill="url(#iconGlow)" filter="url(#blur2)" opacity="0.6"/>
+
+  <!-- Subtle grid dots -->
+  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="1" fill="rgba(138,92,255,0.18)"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)" opacity="0.6"/>
+
+  <!-- Left accent line -->
+  <rect x="80" y="200" width="4" height="180" rx="2" fill="url(#accentLine)"/>
+
+  <!-- App logo icon area -->
+  <rect x="820" y="165" width="220" height="220" rx="44" fill="#0d0520" stroke="rgba(138,92,255,0.4)" stroke-width="1.5"/>
+  <rect x="820" y="165" width="220" height="220" rx="44" fill="none" stroke="rgba(138,92,255,0.25)" stroke-width="8" filter="url(#logoGlow)"/>
+  <image href="/icons/logo.png" x="820" y="165" width="220" height="220" clip-path="url(#roundedIcon)" preserveAspectRatio="xMidYMid slice"/>
+
+  <!-- Brand name -->
+  <text x="116" y="248" font-family="Arial Black, sans-serif" font-weight="900" font-size="72" letter-spacing="-2" fill="url(#titleGrad)">Serv-Itz</text>
+
+  <!-- Tagline -->
+  <text x="116" y="310" font-family="Arial, sans-serif" font-weight="400" font-size="28" fill="rgba(177,140,255,0.85)" letter-spacing="0.5">Conectando Imperatriz</text>
+
+  <!-- Divider -->
+  <rect x="116" y="338" width="480" height="1.5" rx="1" fill="rgba(138,92,255,0.25)"/>
+
+  <!-- Main headline -->
+  <text x="116" y="388" font-family="Arial, sans-serif" font-weight="700" font-size="32" fill="white">Encontre Profissionais de Confiança</text>
+
+  <!-- Description -->
+  <text x="116" y="430" font-family="Arial, sans-serif" font-weight="400" font-size="22" fill="rgba(200,190,230,0.65)">Profissionais verificados · Rápido · Seguro · Moderno</text>
+
+  <!-- URL badge -->
+  <rect x="116" y="480" width="230" height="44" rx="22" fill="rgba(138,92,255,0.15)" stroke="rgba(138,92,255,0.4)" stroke-width="1"/>
+  <text x="231" y="508" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#B18CFF" text-anchor="middle">www.servitz.com.br</text>
+
+  <!-- Stat chips -->
+  <rect x="364" y="480" width="120" height="44" rx="22" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+  <text x="424" y="508" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="rgba(52,211,153,0.9)" text-anchor="middle">500+ Pro's</text>
+
+  <rect x="498" y="480" width="140" height="44" rx="22" fill="rgba(255,217,102,0.1)" stroke="rgba(255,217,102,0.3)" stroke-width="1"/>
+  <text x="568" y="508" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="rgba(255,217,102,0.9)" text-anchor="middle">⭐ 4.9 / 5.0</text>
+
+  <!-- Border glow frame -->
+  <rect x="1" y="1" width="1198" height="628" rx="0" fill="none" stroke="rgba(138,92,255,0.12)" stroke-width="2"/>
+  <rect x="0" y="0" width="1200" height="4" fill="url(#accentLine)" opacity="0.8"/>
+</svg>
