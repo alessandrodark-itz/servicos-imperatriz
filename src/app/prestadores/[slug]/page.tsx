@@ -280,12 +280,12 @@ export default async function ProviderDetailPage({ params }: Props) {
               {/* ── Mobile: banner de foto no topo ── */}
               <div
                 className="sm:hidden relative overflow-hidden"
-                style={{ height: '260px', borderRadius: '24px 24px 0 0' }}
+                style={{ aspectRatio: '9/16', borderRadius: '24px 24px 0 0' }}
               >
                 {p.avatarUrl ? (
                   <img
                     src={p.avatarUrl} alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
                   />
                 ) : (
                   <div style={{
