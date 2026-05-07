@@ -134,7 +134,7 @@ export default function StatCards() {
   }, [])
 
   return (
-    <div ref={ref} className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+    <div ref={ref} className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
       {statDefs.map(stat => (
         <StatCard key={stat.label} stat={stat} active={active} />
       ))}

@@ -271,9 +271,9 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
           <div
             className="relative overflow-hidden"
             style={{
-              height: 'clamp(210px, 40vw, 440px)',
+              aspectRatio: '16/9',
+              maxHeight: 440,
               borderRadius: 32,
-              /* glow ambiente */
               boxShadow: '0 0 80px rgba(138,92,255,0.07)',
             }}
           >
