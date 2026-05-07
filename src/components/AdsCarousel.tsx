@@ -68,16 +68,16 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
       </div>
 
       {/* Conteúdo inferior */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-2.5 sm:p-6 lg:p-8">
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-2.5 sm:p-6 lg:p-10">
         <h3
-          className="mb-1 sm:mb-2 text-[13px] sm:text-xl lg:text-[1.75rem] font-black tracking-tight text-white"
-          style={{ textShadow: '0 2px 24px rgba(0,0,0,0.9), 0 0 40px rgba(138,92,255,0.15)' }}
+          className="mb-1 sm:mb-2 text-[13px] sm:text-xl lg:text-3xl xl:text-4xl font-black tracking-tight text-white"
+          style={{ textShadow: '0 2px 24px rgba(0,0,0,0.95), 0 0 48px rgba(138,92,255,0.2)' }}
         >
           {ad.title}
         </h3>
 
         {ad.description && (
-          <p className="hidden sm:block mb-4 line-clamp-2 max-w-lg text-sm leading-relaxed text-white/60 sm:text-base">
+          <p className="hidden sm:block mb-4 line-clamp-2 max-w-lg text-sm leading-relaxed text-white/60 sm:text-base lg:text-base lg:max-w-xl lg:text-white/70">
             {ad.description}
           </p>
         )}
@@ -85,13 +85,13 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
           {ad.button_text && (
             <span
-              className="inline-flex items-center gap-1 sm:gap-2 rounded-full px-2.5 py-1 sm:px-5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110"
+              className="inline-flex items-center gap-1 sm:gap-2 rounded-full px-2.5 py-1 sm:px-5 sm:py-2.5 lg:px-7 lg:py-3 text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-[1.04] hover:brightness-110 hover:shadow-[0_0_48px_rgba(138,92,255,0.9)]"
               style={{
                 background: 'linear-gradient(135deg, #7b2ff7 0%, #9b5cff 60%, #b47fff 100%)',
                 boxShadow: '0 0 28px rgba(138,92,255,0.6), 0 4px 16px rgba(0,0,0,0.45)',
               }}
             >
-              {ad.link_url && <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3" />}
+              {ad.link_url && <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 lg:h-3.5 lg:w-3.5" />}
               {ad.button_text}
             </span>
           )}
@@ -100,14 +100,14 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
             <button
               type="button"
               onClick={e => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${ad.phone}` }}
-              className="flex items-center gap-1 sm:gap-2 rounded-full px-2.5 py-1 sm:px-4 sm:py-2.5 text-[10px] sm:text-xs font-semibold text-white/80 transition-all hover:text-white"
+              className="flex items-center gap-1 sm:gap-2 rounded-full px-2.5 py-1 sm:px-4 sm:py-2.5 lg:px-5 lg:py-3 text-[10px] sm:text-xs lg:text-sm font-semibold text-white/80 transition-all hover:text-white hover:bg-white/12"
               style={{
                 background: 'rgba(255,255,255,0.07)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(255,255,255,0.14)',
               }}
             >
-              <Phone className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-[#B18CFF]" />
+              <Phone className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 lg:h-4 lg:w-4 text-[#B18CFF]" />
               {ad.phone}
             </button>
           )}
@@ -197,10 +197,10 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
     if (Math.abs(off) === 1) {
       return {
         ...common,
-        transform: `translateX(${off > 0 ? 102 : -102}%) scale(0.84)`,
-        opacity: 0.35,
+        transform: `translateX(${off > 0 ? 100 : -100}%) scale(0.87)`,
+        opacity: 0.52,
         zIndex: 5,
-        filter: 'blur(2.5px) brightness(0.5) saturate(0.7)',
+        filter: 'blur(1.5px) brightness(0.62) saturate(0.8)',
       }
     }
     return {
@@ -225,10 +225,26 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
 
   return (
     <section
-      className="py-10 select-none"
-      style={{ background: 'linear-gradient(180deg, #070114 0%, #05010d 100%)' }}
+      className="relative py-10 lg:py-16 select-none overflow-hidden"
+      style={{ background: 'linear-gradient(180deg, #07010f 0%, #060116 45%, #05010d 100%)' }}
     >
-      <div className="mx-auto max-w-7xl px-4">
+      {/* ── Ambient glow orbs (desktop only) ── */}
+      <div className="pointer-events-none hidden lg:block" aria-hidden>
+        <div
+          className="absolute left-1/2 top-0 -translate-x-1/2 opacity-35"
+          style={{ width: 900, height: 420, background: 'radial-gradient(ellipse at center, rgba(138,92,255,0.28) 0%, transparent 68%)', filter: 'blur(32px)' }}
+        />
+        <div
+          className="absolute -bottom-24 left-1/4 -translate-x-1/2 opacity-20"
+          style={{ width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, #d946ef, transparent 70%)', filter: 'blur(56px)' }}
+        />
+        <div
+          className="absolute -bottom-24 right-1/4 translate-x-1/2 opacity-20"
+          style={{ width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, #6d28d9, transparent 70%)', filter: 'blur(56px)' }}
+        />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-4">
 
         {/* ── Header ── */}
         <div className="mb-7 flex items-center gap-4">
@@ -274,7 +290,7 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
               aspectRatio: '16/9',
               maxHeight: 'var(--ads-max-height, 440px)',
               borderRadius: 32,
-              boxShadow: '0 0 80px rgba(138,92,255,0.07)',
+              boxShadow: '0 0 0 1px rgba(138,92,255,0.18), 0 0 80px rgba(138,92,255,0.18), 0 40px 80px rgba(0,0,0,0.55)',
             }}
           >
             {/* Glows laterais */}
@@ -302,30 +318,30 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
           <button
             onClick={prev}
             aria-label="Anterior"
-            className="hidden sm:flex absolute left-3 top-1/2 z-30 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 sm:left-5 sm:h-12 sm:w-12"
+            className="hidden sm:flex absolute left-3 top-1/2 z-30 h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_32px_rgba(138,92,255,0.5)] sm:left-4 sm:h-12 sm:w-12 lg:-left-7 lg:h-14 lg:w-14"
             style={{
-              background: 'rgba(7,1,20,0.7)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(138,92,255,0.32)',
-              boxShadow: '0 0 22px rgba(138,92,255,0.15), 0 4px 16px rgba(0,0,0,0.5)',
+              background: 'rgba(7,1,20,0.85)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(138,92,255,0.38)',
+              boxShadow: '0 0 24px rgba(138,92,255,0.2), 0 4px 20px rgba(0,0,0,0.6)',
             }}
           >
-            <ChevronLeft className="h-5 w-5 text-white" strokeWidth={2.5} />
+            <ChevronLeft className="h-5 w-5 text-white lg:h-6 lg:w-6" strokeWidth={2.5} />
           </button>
 
           {/* ── Seta direita ── */}
           <button
             onClick={next}
             aria-label="Próximo"
-            className="hidden sm:flex absolute right-3 top-1/2 z-30 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 sm:right-5 sm:h-12 sm:w-12"
+            className="hidden sm:flex absolute right-3 top-1/2 z-30 h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_32px_rgba(138,92,255,0.5)] sm:right-4 sm:h-12 sm:w-12 lg:-right-7 lg:h-14 lg:w-14"
             style={{
-              background: 'rgba(7,1,20,0.7)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(138,92,255,0.32)',
-              boxShadow: '0 0 22px rgba(138,92,255,0.15), 0 4px 16px rgba(0,0,0,0.5)',
+              background: 'rgba(7,1,20,0.85)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(138,92,255,0.38)',
+              boxShadow: '0 0 24px rgba(138,92,255,0.2), 0 4px 20px rgba(0,0,0,0.6)',
             }}
           >
-            <ChevronRight className="h-5 w-5 text-white" strokeWidth={2.5} />
+            <ChevronRight className="h-5 w-5 text-white lg:h-6 lg:w-6" strokeWidth={2.5} />
           </button>
         </div>
 

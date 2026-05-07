@@ -282,9 +282,9 @@ body {
 }
 @media (min-width: 1024px) {
   :root {
-    --ads-card-left: 6%;
-    --ads-card-width: 88%;
-    --ads-max-height: 600px;
+    --ads-card-left: 4%;
+    --ads-card-width: 92%;
+    --ads-max-height: 640px;
   }
 }
 

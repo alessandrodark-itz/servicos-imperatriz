@@ -164,13 +164,14 @@ export default function Header() {
       }`}
       style={{
         borderBottom: scrolled
-          ? '1px solid rgba(138,92,255,0.15)'
-          : '1px solid rgba(255,255,255,0.07)',
+          ? '1px solid rgba(138,92,255,0.22)'
+          : '1px solid rgba(255,255,255,0.06)',
         background: scrolled
-          ? 'rgba(5,1,10,0.97)'
-          : 'rgba(5,1,10,0.75)',
-        backdropFilter: scrolled ? 'blur(24px)' : 'blur(16px)',
-        WebkitBackdropFilter: scrolled ? 'blur(24px)' : 'blur(16px)',
+          ? 'rgba(5,1,10,0.94)'
+          : 'rgba(5,1,10,0.65)',
+        backdropFilter: scrolled ? 'blur(32px) saturate(180%)' : 'blur(20px) saturate(150%)',
+        WebkitBackdropFilter: scrolled ? 'blur(32px) saturate(180%)' : 'blur(20px) saturate(150%)',
+        boxShadow: scrolled ? '0 4px 40px rgba(0,0,0,0.55), 0 1px 0 rgba(138,92,255,0.1)' : 'none',
       }}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -223,19 +224,21 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative text-sm font-medium transition-colors ${
+                  className={`relative text-sm font-semibold transition-all duration-200 group ${
                     pathname === link.href
-                      ? 'text-violet-400'
-                      : 'text-white/55 hover:text-white'
+                      ? 'text-violet-300'
+                      : 'text-white/50 hover:text-white/95'
                   }`}
                 >
                   {link.label}
-                  {pathname === link.href && (
-                    <span
-                      className="absolute -bottom-1 left-0 right-0 h-px rounded-full"
-                      style={{ background: 'linear-gradient(90deg, transparent, #8A5CFF, transparent)' }}
-                    />
-                  )}
+                  <span
+                    className="absolute -bottom-1 left-0 right-0 h-px rounded-full transition-all duration-300"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent, #8A5CFF, transparent)',
+                      opacity: pathname === link.href ? 1 : 0,
+                      transform: pathname === link.href ? 'scaleX(1)' : 'scaleX(0)',
+                    }}
+                  />
                 </Link>
               )
             })}
