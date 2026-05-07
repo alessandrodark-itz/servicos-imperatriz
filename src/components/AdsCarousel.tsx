@@ -52,9 +52,9 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
       />
 
       {/* Badge PATROCINADO */}
-      <div className="absolute left-5 top-5 z-20">
+      <div className="absolute left-3 top-3 z-20 sm:left-5 sm:top-5">
         <span
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-white"
+          className="flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-0.5 sm:px-3 sm:py-1.5 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.18em] sm:tracking-[0.22em] text-white"
           style={{
             background: 'rgba(138,92,255,0.22)',
             backdropFilter: 'blur(14px)',
@@ -62,15 +62,15 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
             boxShadow: '0 0 18px rgba(138,92,255,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}
         >
-          <Zap className="h-2.5 w-2.5 fill-[#B18CFF] text-[#B18CFF]" />
+          <Zap className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-[#B18CFF] text-[#B18CFF]" />
           Patrocinado
         </span>
       </div>
 
       {/* Conteúdo inferior */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-3 sm:p-6 lg:p-8">
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-2.5 sm:p-6 lg:p-8">
         <h3
-          className="mb-1 sm:mb-2 text-sm sm:text-xl lg:text-[1.75rem] font-black tracking-tight text-white"
+          className="mb-1 sm:mb-2 text-[13px] sm:text-xl lg:text-[1.75rem] font-black tracking-tight text-white"
           style={{ textShadow: '0 2px 24px rgba(0,0,0,0.9), 0 0 40px rgba(138,92,255,0.15)' }}
         >
           {ad.title}
@@ -82,16 +82,16 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
           {ad.button_text && (
             <span
-              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 py-1.5 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110"
+              className="inline-flex items-center gap-1 sm:gap-2 rounded-full px-2.5 py-1 sm:px-5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:brightness-110"
               style={{
                 background: 'linear-gradient(135deg, #7b2ff7 0%, #9b5cff 60%, #b47fff 100%)',
                 boxShadow: '0 0 28px rgba(138,92,255,0.6), 0 4px 16px rgba(0,0,0,0.45)',
               }}
             >
-              {ad.link_url && <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+              {ad.link_url && <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3" />}
               {ad.button_text}
             </span>
           )}
@@ -100,14 +100,14 @@ function AdCard({ ad, active }: { ad: AdItem; active: boolean }) {
             <button
               type="button"
               onClick={e => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${ad.phone}` }}
-              className="flex items-center gap-1.5 sm:gap-2 rounded-full px-3 py-1.5 sm:px-4 sm:py-2.5 text-[11px] sm:text-xs font-semibold text-white/80 transition-all hover:text-white"
+              className="flex items-center gap-1 sm:gap-2 rounded-full px-2.5 py-1 sm:px-4 sm:py-2.5 text-[10px] sm:text-xs font-semibold text-white/80 transition-all hover:text-white"
               style={{
                 background: 'rgba(255,255,255,0.07)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(255,255,255,0.14)',
               }}
             >
-              <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#B18CFF]" />
+              <Phone className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-[#B18CFF]" />
               {ad.phone}
             </button>
           )}
