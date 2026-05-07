@@ -86,7 +86,7 @@ export default function HowItWorks() {
       <div className="relative mx-auto max-w-7xl">
 
         {/* ── Header ── */}
-        <div className="mb-16 text-center">
+        <div className="mb-8 sm:mb-16 text-center">
           <div
             className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5"
             style={{
@@ -113,7 +113,7 @@ export default function HowItWorks() {
         {/* ── Steps ── */}
         <div className="relative">
 
-          {/* Connector line — desktop */}
+          {/* Connector line — desktop only */}
           <div
             aria-hidden
             className="absolute left-[12.5%] right-[12.5%] top-[2.25rem] hidden h-px lg:block"
@@ -121,7 +121,6 @@ export default function HowItWorks() {
               background: 'linear-gradient(90deg, transparent, rgba(138,92,255,0.35) 15%, rgba(138,92,255,0.35) 85%, transparent)',
             }}
           />
-          {/* Connector dots at connector intersections */}
           {[0,1,2,3].map(i => (
             <div
               key={i}
@@ -135,21 +134,24 @@ export default function HowItWorks() {
             />
           ))}
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map(({ number, Icon, title, description, gradient, glow, borderGlow }, i) => (
               <div
                 key={number}
                 ref={(el) => { stepRefs.current[i] = el }}
-                className="group flex flex-col items-center text-center"
+                className="group"
                 style={{
                   opacity: visible[i] ? 1 : 0,
                   transform: visible[i] ? 'translateY(0)' : 'translateY(32px)',
                   transition: `opacity 0.65s ease-out ${i * 0.14}s, transform 0.65s ease-out ${i * 0.14}s`,
                 }}
               >
-                {/* Card wrapper */}
+                {/* Card — horizontal no mobile, vertical no sm+ */}
                 <div
-                  className="relative flex w-full flex-col items-center overflow-hidden rounded-3xl px-5 py-8 transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_16px_48px_rgba(138,92,255,0.12)]"
+                  className="relative flex w-full overflow-hidden rounded-2xl sm:rounded-3xl transition-all duration-300
+                             flex-row items-center gap-4 px-4 py-4
+                             sm:flex-col sm:items-center sm:text-center sm:px-5 sm:py-8
+                             group-hover:-translate-y-1 group-hover:shadow-[0_16px_48px_rgba(138,92,255,0.12)]"
                   style={{
                     background: 'linear-gradient(160deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
                     border: `1px solid ${borderGlow}`,
@@ -163,40 +165,34 @@ export default function HowItWorks() {
 
                   {/* Number badge */}
                   <div
-                    className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white"
+                    className="absolute right-3 top-3 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[9px] sm:text-[10px] font-black text-white z-10"
                     style={{ background: gradient, boxShadow: `0 0 12px ${glow}` }}
                   >
                     {number}
                   </div>
 
                   {/* Icon */}
-                  <div className="relative mb-6">
+                  <div className="relative shrink-0 sm:mb-6">
                     <div
-                      className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-110"
+                      className="flex h-12 w-12 sm:h-[4.5rem] sm:w-[4.5rem] items-center justify-center rounded-xl sm:rounded-2xl transition-all duration-300 group-hover:scale-110"
                       style={{
                         background: gradient,
-                        boxShadow: `0 8px 32px ${glow}, 0 0 0 1px rgba(255,255,255,0.1)`,
+                        boxShadow: `0 4px 20px ${glow}, 0 0 0 1px rgba(255,255,255,0.1)`,
                       }}
                     >
-                      <Icon className="h-8 w-8 text-white" />
+                      <Icon className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
                     </div>
-                    {/* Icon glow */}
-                    <div
-                      className="pointer-events-none absolute -inset-3 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                      style={{
-                        background: `radial-gradient(circle, ${glow.replace('0.4', '0.2')} 0%, transparent 70%)`,
-                        filter: 'blur(8px)',
-                      }}
-                    />
                   </div>
 
                   {/* Text */}
-                  <h3 className="text-sm font-bold text-white transition-colors group-hover:text-violet-300">
-                    {title}
-                  </h3>
-                  <p className="mt-2.5 text-xs leading-relaxed text-white/42">
-                    {description}
-                  </p>
+                  <div className="flex flex-col text-left sm:text-center sm:items-center">
+                    <h3 className="text-sm font-bold text-white transition-colors group-hover:text-violet-300">
+                      {title}
+                    </h3>
+                    <p className="mt-1 sm:mt-2.5 text-xs leading-relaxed text-white/42">
+                      {description}
+                    </p>
+                  </div>
 
                   {/* Bottom accent */}
                   <div
@@ -211,7 +207,7 @@ export default function HowItWorks() {
 
         {/* ── Bottom CTA strip ── */}
         <div
-          className="mt-16 flex flex-col items-center gap-5 rounded-3xl px-8 py-10 text-center sm:flex-row sm:justify-between sm:text-left"
+          className="mt-8 sm:mt-16 flex flex-col items-center gap-5 rounded-3xl px-6 py-8 sm:px-8 sm:py-10 text-center sm:flex-row sm:justify-between sm:text-left"
           style={{
             background: 'linear-gradient(135deg, rgba(138,92,255,0.12) 0%, rgba(217,70,239,0.08) 100%)',
             border: '1px solid rgba(138,92,255,0.2)',
