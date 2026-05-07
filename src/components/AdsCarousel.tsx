@@ -197,10 +197,10 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
     if (Math.abs(off) === 1) {
       return {
         ...common,
-        transform: `translateX(${off > 0 ? 100 : -100}%) scale(0.87)`,
-        opacity: 0.52,
+        transform: `translateX(${off > 0 ? 96 : -96}%) scale(0.88)`,
+        opacity: 0.58,
         zIndex: 5,
-        filter: 'blur(1.5px) brightness(0.62) saturate(0.8)',
+        filter: 'blur(1px) brightness(0.65) saturate(0.85)',
       }
     }
     return {
@@ -290,14 +290,38 @@ export default function AdsCarousel({ ads }: { ads: AdItem[] }) {
               aspectRatio: '16/9',
               maxHeight: 'var(--ads-max-height, 440px)',
               borderRadius: 32,
-              boxShadow: '0 0 0 1px rgba(138,92,255,0.18), 0 0 80px rgba(138,92,255,0.18), 0 40px 80px rgba(0,0,0,0.55)',
+              boxShadow: '0 0 0 1px rgba(138,92,255,0.15), 0 0 60px rgba(138,92,255,0.14), 0 32px 64px rgba(0,0,0,0.6)',
             }}
           >
-            {/* Glows laterais */}
-            <div className="pointer-events-none absolute -left-10 top-1/2 z-0 h-48 w-48 -translate-y-1/2 rounded-full opacity-25"
-              style={{ background: 'radial-gradient(circle,#8A5CFF,transparent 70%)', filter: 'blur(36px)' }} />
-            <div className="pointer-events-none absolute -right-10 top-1/2 z-0 h-48 w-48 -translate-y-1/2 rounded-full opacity-25"
-              style={{ background: 'radial-gradient(circle,#8A5CFF,transparent 70%)', filter: 'blur(36px)' }} />
+            {/* ── Cinematic background: slide atual borrado (desktop only) ── */}
+            <div className="hidden lg:block pointer-events-none absolute inset-0" style={{ zIndex: 0 }}>
+              {/* Imagem do slide atual, fortemente borrada */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url(${ads[current].image_url})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(48px) brightness(0.15) saturate(2.5)',
+                  transform: 'scale(1.25)',
+                  transition: 'background-image 0.8s ease',
+                }}
+              />
+              {/* Vignette lateral — escurece as bordas para fundir */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(90deg, rgba(5,1,14,0.9) 0%, transparent 20%, transparent 80%, rgba(5,1,14,0.9) 100%)',
+                }}
+              />
+              {/* Vignette topo — suaviza borda superior */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(5,1,14,0.6) 0%, transparent 30%)',
+                }}
+              />
+            </div>
 
             {/* Cards desktop (3D) */}
             <div className="hidden lg:block h-full">
