@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { MapPin, Star, Phone, MessageCircle, ChevronRight, Heart, CheckCircle, Zap } from 'lucide-react'
 import WhatsAppLink from '@/components/WhatsAppLink'
+import PlanBadge from '@/components/PlanBadge'
+import { isPremiumActive } from '@/lib/plans'
 
 type Provider = {
   id: string
@@ -17,6 +19,8 @@ type Provider = {
   whatsapp?: string
   location?: string
   featured?: boolean
+  plan?: string
+  planExpiresAt?: string | null
 }
 
 type Props = {
@@ -25,6 +29,7 @@ type Props = {
 }
 
 export default function ProviderCard({ provider, variant = 'default' }: Props) {
+  const premium = isPremiumActive(provider.plan, provider.planExpiresAt)
 
   /* ── COMPACT ── */
   if (variant === 'compact') {
@@ -164,18 +169,21 @@ export default function ProviderCard({ provider, variant = 'default' }: Props) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0c0718]/80 via-transparent to-transparent" />
 
-        {/* category + heart */}
+        {/* category + premium + heart */}
         <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
-          <span
-            className="min-w-0 truncate rounded-full px-2.5 py-1 text-[10px] font-bold text-white"
-            style={{
-              background: 'rgba(138,92,255,0.25)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(138,92,255,0.35)',
-            }}
-          >
-            {provider.category}
-          </span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span
+              className="min-w-0 truncate rounded-full px-2.5 py-1 text-[10px] font-bold text-white"
+              style={{
+                background: 'rgba(138,92,255,0.25)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(138,92,255,0.35)',
+              }}
+            >
+              {provider.category}
+            </span>
+            {premium && <PlanBadge size="xs" />}
+          </div>
           <button
             className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
             style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}

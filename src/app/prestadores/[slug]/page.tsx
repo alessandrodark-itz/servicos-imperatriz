@@ -10,7 +10,9 @@ import ProfileCarousel from '@/components/ProfileCarousel'
 import { ShareButton, FloatingWhatsApp } from '@/components/ProviderActions'
 import EmblemasDisplay from '@/components/EmblemasDisplay'
 import WhatsAppLink from '@/components/WhatsAppLink'
+import PlanBadge from '@/components/PlanBadge'
 import { getProviderBySlug, categories } from '@/lib/mock-data'
+import { isPremiumActive } from '@/lib/plans'
 import {
   MapPin, Phone, MessageCircle, ChevronRight,
   Shield, Zap, CheckCircle2, Award,
@@ -229,6 +231,8 @@ export default async function ProviderDetailPage({ params }: Props) {
     featured:      false,
     rating:        5.0,
     reviews:       0,
+    plan:          dbProvider.plan          ?? 'free',
+    planExpiresAt: dbProvider.plan_expires_at ?? null,
   } : {
     name:          mockProvider!.name,
     description:   mockProvider!.description,
@@ -245,6 +249,8 @@ export default async function ProviderDetailPage({ params }: Props) {
     featured:      mockProvider!.featured ?? false,
     rating:        mockProvider!.rating,
     reviews:       mockProvider!.reviews,
+    plan:          'free',
+    planExpiresAt: null,
   }
 
   const catNames = p.categories
@@ -484,7 +490,12 @@ export default async function ProviderDetailPage({ params }: Props) {
 
                   {/* Nome + verificação */}
                   <div>
-                    {p.featured && (
+                    {isPremiumActive(p.plan, p.planExpiresAt) && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <PlanBadge size="sm" />
+                      </div>
+                    )}
+                    {!isPremiumActive(p.plan, p.planExpiresAt) && p.featured && (
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '4px',
                         background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',

@@ -4,6 +4,7 @@ import Footer from '@/components/Footer'
 import ProviderCard from '@/components/ProviderCard'
 import SectionHeader from '@/components/SectionHeader'
 import { providers as mockProviders, categories } from '@/lib/mock-data'
+import { isPremiumActive } from '@/lib/plans'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ async function getAllDbProviders() {
     )
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase.from('providers') as any)
-      .select('*')
+      .select('id, name, slug, categories, description, cover_url, phone, whatsapp, location, created_at, plan, plan_expires_at')
       .eq('active', true)
       .order('created_at', { ascending: false })
     return (data ?? []) as any[]
@@ -29,29 +30,36 @@ export default async function PrestadoresPage() {
   const dbSlugs = new Set(dbProviders.map((p: any) => p.slug))
   const filteredMock = mockProviders.filter((p) => !dbSlugs.has(p.slug))
 
-  const allProviders = [
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...dbProviders.map((p: any) => {
-      const catId = p.categories?.[0]
-      const cat = categories.find(c => c.id === catId || c.slug === catId)
-      return {
-        id:          p.id ?? p.slug,
-        name:        p.name        ?? 'Prestador',
-        slug:        p.slug        ?? '',
-        category:    cat?.name     ?? 'Serviços',
-        categorySlug: cat?.slug    ?? '',
-        rating:      5.0,
-        reviews:     0,
-        description: p.description ?? '',
-        image:       p.cover_url   ?? '',
-        phone:       p.phone       ?? '',
-        whatsapp:    p.whatsapp    ?? '',
-        location:    p.location    ?? '',
-        featured:    false,
-      }
-    }),
-    ...filteredMock,
-  ]
+  const mappedDb = dbProviders.map((p: any) => {
+    const catId = p.categories?.[0]
+    const cat = categories.find(c => c.id === catId || c.slug === catId)
+    return {
+      id:            p.id ?? p.slug,
+      name:          p.name          ?? 'Prestador',
+      slug:          p.slug          ?? '',
+      category:      cat?.name       ?? 'Serviços',
+      categorySlug:  cat?.slug       ?? '',
+      rating:        5.0,
+      reviews:       0,
+      description:   p.description  ?? '',
+      image:         p.cover_url    ?? '',
+      phone:         p.phone        ?? '',
+      whatsapp:      p.whatsapp     ?? '',
+      location:      p.location     ?? '',
+      featured:      false,
+      plan:          p.plan          ?? 'free',
+      planExpiresAt: p.plan_expires_at ?? null,
+    }
+  })
+
+  // Premium providers appear first
+  mappedDb.sort((a: any, b: any) => {
+    const aP = isPremiumActive(a.plan, a.planExpiresAt) ? 1 : 0
+    const bP = isPremiumActive(b.plan, b.planExpiresAt) ? 1 : 0
+    return bP - aP
+  })
+
+  const allProviders = [...mappedDb, ...filteredMock]
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -12,11 +12,14 @@ import {
   Plus, X, Save, Loader2, CheckCircle, AlertCircle,
   ExternalLink, MessageCircle, Image as ImageIcon,
   LayoutDashboard, Eye, EyeOff, Star, Shield, Sparkles, CheckCircle2, ScrollText, Award, Camera,
+  Lock, Crown,
 } from 'lucide-react'
 import TermsModal from '@/components/TermsModal'
 import EmblemasSelector from '@/components/EmblemasSelector'
 import ImageUpload from '@/components/ImageUpload'
+import PlanBadge from '@/components/PlanBadge'
 import { CURRENT_TERMS_VERSION } from '@/lib/terms-config'
+import { isPremiumActive, getMaxPhotos, FREE_MAX_PHOTOS, PREMIUM_MAX_PHOTOS } from '@/lib/plans'
 
 /* ── helpers ─────────────────────────────────────────── */
 function formatPhone(v: string): string {
@@ -233,6 +236,92 @@ function Field({ label, tip, children }: { label: string; tip?: string; children
   )
 }
 
+/* ══════════ PLAN CARD ═════════════════════════════════ */
+function PlanCard({ info }: { info: { plan: string; planExpiresAt: string | null; profileViews: number; whatsappClicks: number } }) {
+  const premium = isPremiumActive(info.plan, info.planExpiresAt)
+  const expiresLabel = info.planExpiresAt
+    ? new Date(info.planExpiresAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+    : null
+
+  const waUpgrade = `https://wa.me/559981070074?text=${encodeURIComponent('Olá! Quero fazer upgrade para o Plano Premium no Serv-Itz.')}`
+
+  return (
+    <div className={`rounded-2xl border p-5 ${premium ? 'border-amber-400/30 bg-gradient-to-br from-amber-500/10 to-yellow-500/5' : 'border-white/10 bg-white/5'}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${premium ? 'bg-amber-500/20' : 'bg-white/10'}`}>
+            <Crown className={`h-5 w-5 ${premium ? 'text-amber-400' : 'text-white/40'}`} />
+          </div>
+          <div>
+            <p className="text-xs text-white/40">Seu plano atual</p>
+            <div className="flex items-center gap-2">
+              <p className={`text-sm font-bold ${premium ? 'text-amber-300' : 'text-white'}`}>
+                {premium ? 'Premium' : 'Gratuito'}
+              </p>
+              {premium && <PlanBadge size="xs" />}
+            </div>
+          </div>
+        </div>
+        {premium && expiresLabel && (
+          <p className="text-right text-[10px] text-amber-300/60">válido até<br /><span className="font-semibold">{expiresLabel}</span></p>
+        )}
+        {!premium && (
+          <a
+            href={waUpgrade} target="_blank" rel="noopener noreferrer"
+            className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 px-4 py-2 text-xs font-bold text-black shadow-[0_0_16px_rgba(245,158,11,0.35)] transition-all hover:shadow-[0_0_24px_rgba(245,158,11,0.55)] hover:-translate-y-0.5"
+          >
+            Fazer Upgrade
+          </a>
+        )}
+      </div>
+
+      {/* Plan feature comparison */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {[
+          { label: `Até ${FREE_MAX_PHOTOS} fotos`,    free: true,    premium: false },
+          { label: `Até ${PREMIUM_MAX_PHOTOS} fotos`,  free: false,   premium: true  },
+          { label: 'Listagem padrão',                   free: true,    premium: false },
+          { label: 'Destaque na busca',                 free: false,   premium: true  },
+          { label: 'Badge Premium',                     free: false,   premium: true  },
+          { label: 'Analytics do perfil',               free: false,   premium: true  },
+        ].map((f) => {
+          const active = premium ? f.premium : f.free
+          return (
+            <div key={f.label} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${active ? 'bg-white/8 text-white/70' : 'bg-white/3 text-white/25'}`}>
+              {active
+                ? <CheckCircle className="h-3 w-3 shrink-0 text-green-400" />
+                : <Lock className="h-3 w-3 shrink-0 text-white/20" />
+              }
+              {f.label}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Analytics — premium only */}
+      {premium && (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-violet-500/20 bg-violet-500/8 p-3 text-center">
+            <Eye className="mx-auto h-4 w-4 text-violet-400" />
+            <p className="mt-1 text-lg font-bold text-white">{info.profileViews}</p>
+            <p className="text-[10px] text-white/40">Visualizações</p>
+          </div>
+          <div className="rounded-xl border border-green-500/20 bg-green-500/8 p-3 text-center">
+            <MessageCircle className="mx-auto h-4 w-4 text-green-400" />
+            <p className="mt-1 text-lg font-bold text-white">{info.whatsappClicks}</p>
+            <p className="text-[10px] text-white/40">Cliques WhatsApp</p>
+          </div>
+        </div>
+      )}
+      {!premium && (
+        <p className="mt-3 text-center text-[10px] text-white/30">
+          Faça upgrade para desbloquear analytics, destaque e mais fotos
+        </p>
+      )}
+    </div>
+  )
+}
+
 /* ══════════ MAIN PAGE ═════════════════════════════════ */
 export default function PrestadorDashboard() {
   const router = useRouter()
@@ -248,6 +337,10 @@ export default function PrestadorDashboard() {
   const [showPrev,      setShowPrev]      = useState(false)
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null)
   const [termsDeclined, setTermsDeclined] = useState(false)
+  const [planInfo, setPlanInfo] = useState({
+    plan: 'free', planExpiresAt: null as string | null,
+    profileViews: 0, whatsappClicks: 0,
+  })
 
   const [data, setData] = useState<PData>({
     name: '', description: '', location: '',
@@ -306,6 +399,12 @@ export default function PrestadorDashboard() {
         }
 
         setTermsAccepted(accepted && (versionMatch || legacyAcceptance))
+        setPlanInfo({
+          plan:           provider.plan            ?? 'free',
+          planExpiresAt:  provider.plan_expires_at ?? null,
+          profileViews:   provider.profile_views   ?? 0,
+          whatsappClicks: provider.whatsapp_clicks ?? 0,
+        })
       } else {
         const name = session.user.user_metadata?.full_name ?? ''
         setData(d => ({ ...d, name }))
@@ -526,6 +625,7 @@ export default function PrestadorDashboard() {
             <div className="space-y-5">
 
               <Completion data={data} />
+              <PlanCard info={planInfo} />
 
               {/* Feedback */}
               {error && (
@@ -740,15 +840,27 @@ export default function PrestadorDashboard() {
                   </>)}
 
                   {/* ── FOTOS / CAPA ── */}
-                  {tab === 'capa' && (<>
+                  {tab === 'capa' && (() => {
+                    const maxPhotos = getMaxPhotos(planInfo.plan, planInfo.planExpiresAt)
+                    const premium   = isPremiumActive(planInfo.plan, planInfo.planExpiresAt)
+                    return (<>
 
                     {/* Info */}
                     <div className="flex items-start gap-3 rounded-xl border border-[#7F77DD]/25 bg-[#7F77DD]/8 p-4">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#7F77DD]/20">
                         <ImageIcon className="h-4 w-4 text-[#7F77DD]" />
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">Galeria de fotos — até 4 imagens</p>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-white">
+                            Galeria de fotos — até {maxPhotos} {maxPhotos === 1 ? 'imagem' : 'imagens'}
+                          </p>
+                          {!premium && (
+                            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                              Premium = {PREMIUM_MAX_PHOTOS} fotos
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-0.5 text-xs text-white/45">
                           Aparecem como <span className="font-semibold text-violet-300">carrossel automático</span> no seu perfil público.
                         </p>
@@ -759,8 +871,9 @@ export default function PrestadorDashboard() {
                     </div>
 
                     <ImageUpload
-                      images={data.images}
+                      images={data.images.slice(0, maxPhotos)}
                       onChange={imgs => setData(d => ({ ...d, images: imgs, cover_url: imgs[0] || null }))}
+                      maxImages={maxPhotos}
                     />
 
                     {/* ── Ajustar posição ── */}
@@ -819,7 +932,8 @@ export default function PrestadorDashboard() {
                         </div>
                       </div>
                     )}
-                  </>)}
+                  </>)
+                  })()}
 
                   {/* ── EMBLEMAS ── */}
                   {tab === 'emblemas' && userId && (
