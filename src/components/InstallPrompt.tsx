@@ -137,7 +137,6 @@ export function InstallSection() {
 
   const benefits = [
     { icon: Zap,     text: 'Acesso ultrarrápido' },
-    { icon: WifiOff, text: 'Funciona sem internet' },
     { icon: BellRing,text: 'Notificações em tempo real' },
   ]
 
