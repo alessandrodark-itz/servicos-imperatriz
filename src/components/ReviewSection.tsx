@@ -347,7 +347,7 @@ export default function ReviewSection({ providerSlug, providerName }: { provider
             <div>
               <label className="mb-2 block text-sm font-medium text-white/70">Comentário <span className="text-white/30">(opcional)</span></label>
               <textarea value={comment} onChange={e => setComment(e.target.value)}
-                placeholder="Como foi sua experiência? Descreva o serviço, atendimento e qualidade..."
+                placeholder="Como foi sua experiência? Descreva o profissional, pontualidade e atenção..."
                 rows={4} maxLength={600}
                 className="w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:bg-white/10 focus:outline-none"
               />

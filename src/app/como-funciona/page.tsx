@@ -52,9 +52,9 @@ export default function ComoFuncionaPage() {
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-violet-500/20">
                     <Search className="h-7 w-7 text-violet-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Busque o Serviço</h3>
+                  <h3 className="text-lg font-semibold text-white">Descubra Profissionais</h3>
                   <p className="mt-3 text-sm text-white/60 leading-relaxed">
-                    Use a busca ou navegue por categorias para encontrar o tipo de profissional que você precisa.
+                    Use a busca ou navegue por categorias para encontrar o profissional independente ideal para você.
                   </p>
                 </div>
               </div>
@@ -186,7 +186,7 @@ export default function ComoFuncionaPage() {
                   <span className="text-violet-400 transition-transform group-open:rotate-180">▼</span>
                 </summary>
                 <div className="px-6 pb-6 text-sm text-white/60">
-                  Sim! Após utilizar o serviço, você pode deixar uma avaliação com nota e comentário para ajudar outros clientes.
+                  Sim! Após entrar em contato com o profissional, você pode deixar uma avaliação com nota e comentário para ajudar outros usuários na escolha.
                 </div>
               </details>
 
@@ -196,7 +196,7 @@ export default function ComoFuncionaPage() {
                   <span className="text-violet-400 transition-transform group-open:rotate-180">▼</span>
                 </summary>
                 <div className="px-6 pb-6 text-sm text-white/60">
-                  Não! A plataforma não cobra comissão sobre os serviços. O profissional recebe 100% do valor combinado com o cliente.
+                  Não! A plataforma não cobra comissão sobre nenhuma negociação. Todo valor combinado entre profissional e cliente pertence exclusivamente a eles.
                 </div>
               </details>
 

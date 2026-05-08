@@ -552,7 +552,7 @@ function ScreenSuccess() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, borderRadius: 14, background: 'rgba(138,92,255,0.1)', border: '1px solid rgba(138,92,255,0.25)', padding: '11px 13px' }}>
             <Star style={{ width: 16, height: 16, fill: '#fbbf24', color: '#fbbf24', flexShrink: 0 }} />
-            <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Avalie após o atendimento</p>
+            <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Avalie após o contato</p>
           </div>
         </div>
       </div>

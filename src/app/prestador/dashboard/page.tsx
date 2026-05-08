@@ -810,7 +810,7 @@ export default function PrestadorDashboard() {
 
                         {/* Gallery tips */}
                         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                          {['Mostre seu trabalho', 'Antes e depois', 'Local de atendimento', 'Você em ação'].map((tip, i) => (
+                          {['Mostre seu trabalho', 'Antes e depois', 'Ambiente de trabalho', 'Você em ação'].map((tip, i) => (
                             <div key={i} className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-2.5 py-2">
                               <CheckCircle2 className="h-3 w-3 shrink-0 text-violet-400/60" />
                               <span className="text-[10px] text-white/40">{tip}</span>
