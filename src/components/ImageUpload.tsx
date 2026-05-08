@@ -63,19 +63,22 @@ export default function ImageUpload({ images, onChange, maxImages = 4 }: Props) 
         const xhr = new XMLHttpRequest()
         xhr.open('POST', '/api/upload-image')
         xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
+        xhr.timeout = 60_000
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable)
-            patchSlot(slot, { progress: Math.round((e.loaded / e.total) * 95) })
+            patchSlot(slot, { progress: Math.round((e.loaded / e.total) * 90) })
         }
         xhr.onload = () => {
-          if (xhr.status < 300) {
-            resolve((JSON.parse(xhr.responseText) as { url: string }).url)
-          } else {
-            const msg = (JSON.parse(xhr.responseText) as { error?: string }).error ?? 'Erro ao enviar'
-            reject(new Error(msg))
+          try {
+            const data = JSON.parse(xhr.responseText) as { url?: string; error?: string }
+            if (xhr.status < 300 && data.url) resolve(data.url)
+            else reject(new Error(data.error ?? `Erro ${xhr.status} no servidor.`))
+          } catch {
+            reject(new Error(`Erro ${xhr.status}: resposta inválida do servidor.`))
           }
         }
-        xhr.onerror = () => reject(new Error('Erro de rede. Tente novamente.'))
+        xhr.ontimeout = () => reject(new Error('Tempo esgotado. Tente uma imagem menor.'))
+        xhr.onerror   = () => reject(new Error('Erro de rede. Tente novamente.'))
         xhr.send(fd)
       })
 
