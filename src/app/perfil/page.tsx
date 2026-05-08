@@ -13,6 +13,29 @@ import {
 import TermsModal from '@/components/TermsModal'
 import { CURRENT_TERMS_VERSION } from '@/lib/terms-config'
 
+/* Comprime imagem no browser via Canvas (max 1200px, jpeg 85%) */
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const blobUrl = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl)
+      const MAX = 1200
+      let { naturalWidth: w, naturalHeight: h } = img
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], 'avatar.jpg', { type: 'image/jpeg' }) : file),
+        'image/jpeg', 0.85,
+      )
+    }
+    img.src = blobUrl
+  })
+}
+
 function formatPhone(v: string): string {
   const d = v.replace(/\D/g, '').slice(0, 11)
   if (!d.length)     return ''
@@ -128,14 +151,15 @@ export default function PerfilPage() {
     setTermsDeclined(true)
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) { setError('Selecione uma imagem válida.'); return }
-    if (file.size > 2 * 1024 * 1024)    { setError('A imagem deve ter no máximo 2MB.'); return }
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.files?.[0]
+    if (!raw) return
+    if (!raw.type.startsWith('image/')) { setError('Selecione uma imagem válida.'); return }
+    setError('')
+    const file = raw.size > 1.5 * 1024 * 1024 ? await compressImage(raw) : raw
+    if (file.size > 2 * 1024 * 1024) { setError('A imagem deve ter no máximo 2MB.'); return }
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
-    setError('')
   }
 
   async function handleSave(e: React.FormEvent) {
