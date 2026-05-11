@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { createAdmin } from '@/lib/supabase'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ReviewSection from '@/components/ReviewSection'
@@ -11,8 +12,14 @@ import { ShareButton, FloatingWhatsApp } from '@/components/ProviderActions'
 import EmblemasDisplay from '@/components/EmblemasDisplay'
 import WhatsAppLink from '@/components/WhatsAppLink'
 import PlanBadge from '@/components/PlanBadge'
+import OnlineStatus from '@/components/OnlineStatus'
+import CatalogSection from '@/components/CatalogSection'
 import { getProviderBySlug, categories } from '@/lib/mock-data'
-import { isPremiumActive } from '@/lib/plans'
+import { isVip, getOnlineStatus } from '@/lib/plans'
+import {
+  VIP_THEMES, DEFAULT_VIP_CONFIG, generateVipCSS, getVipConic, withAlpha,
+  type VipThemeConfig, type VipThemeId,
+} from '@/lib/vip-themes'
 import {
   MapPin, Phone, MessageCircle, ChevronRight,
   Shield, Zap, CheckCircle2, Award,
@@ -43,6 +50,19 @@ const getCachedProvider = cache(async function getDbProvider(slug: string) {
       .eq('id', data.user_id)
       .single()
     return { ...data, avatar_url: profile?.avatar_url ?? null }
+  } catch { return null }
+})
+
+/* ─── Demo provider: todos os campos de demo_providers ─── */
+const getCachedDemoProvider = cache(async function getDemoProvider(slug: string) {
+  try {
+    const { data } = await (createAdmin() as any)
+      .from('demo_providers')
+      .select('*')
+      .eq('slug', slug)
+      .eq('active', true)
+      .single()
+    return data ?? null
   } catch { return null }
 })
 
@@ -201,16 +221,31 @@ const CSS = `
   }
   .contact-row { transition: border-color .2s ease, background .2s ease, color .2s ease; }
   .contact-row:hover { border-color: rgba(139,92,246,0.3) !important; background: rgba(139,92,246,0.08) !important; color: #fff !important; }
+
+  @keyframes floatGlobal {
+    0%   { transform: translate3d(0, 20px, 0) scale(1);                      opacity: 0; }
+    8%   { opacity: var(--op, 0.4); }
+    92%  { opacity: calc(var(--op, 0.4) * 0.55); }
+    100% { transform: translate3d(var(--tx, 18px), -110vh, 0) scale(0.22);   opacity: 0; }
+  }
+  .atm-particle {
+    position: absolute;
+    width: var(--sz, 3px); height: var(--sz, 3px); border-radius: 50%;
+    will-change: transform, opacity;
+    animation: floatGlobal var(--dur, 12s) ease-in-out var(--delay, 0s) infinite;
+    pointer-events: none;
+  }
 `
 
 /* ══════════════════════════════════════════════════════════
    PAGE
 ══════════════════════════════════════════════════════════ */
 export default async function ProviderDetailPage({ params }: Props) {
-  const { slug }      = await params
-  const dbProvider    = await getCachedProvider(slug)
-  const mockProvider  = !dbProvider ? getProviderBySlug(slug) : null
-  if (!dbProvider && !mockProvider) notFound()
+  const { slug }       = await params
+  const dbProvider     = await getCachedProvider(slug)
+  const demoProvider   = !dbProvider ? await getCachedDemoProvider(slug) : null
+  const mockProvider   = !dbProvider && !demoProvider ? getProviderBySlug(slug) : null
+  if (!dbProvider && !demoProvider && !mockProvider) notFound()
 
   const p = dbProvider ? {
     name:          dbProvider.name          ?? 'Prestador',
@@ -233,7 +268,35 @@ export default async function ProviderDetailPage({ params }: Props) {
     reviews:       0,
     plan:          dbProvider.plan          ?? 'free',
     planExpiresAt: dbProvider.plan_expires_at ?? null,
+    vipBadgeType:  dbProvider.vip_badge_type ?? null,
+    updatedAt:     dbProvider.updated_at     ?? null,
+  } : demoProvider ? {
+    /* ── Perfil demo: dados ao vivo do Supabase demo_providers ── */
+    name:          demoProvider.name         ?? 'Demo',
+    description:   demoProvider.description  ?? '',
+    location:      demoProvider.location     ?? '',
+    phone:         demoProvider.phone        ?? '',
+    whatsapp:      demoProvider.whatsapp     ?? '',
+    images: (() => {
+      const carousel = (demoProvider.carousel_images ?? []).filter(Boolean)
+      if (carousel.length > 0) return carousel
+      return demoProvider.image ? [demoProvider.image] : []
+    })(),
+    coverPosition: 'center',
+    services:      ['Orçamento gratuito', 'Garantia de serviço', 'Atendimento personalizado'],
+    categories:    [demoProvider.category_slug ?? 'servicos'],
+    slug:          demoProvider.slug         ?? slug,
+    avatarUrl:     demoProvider.avatar_image ?? null,
+    userId:        null,
+    featured:      true,
+    rating:        demoProvider.rating       ?? 5.0,
+    reviews:       demoProvider.reviews      ?? 0,
+    plan:          'vip',
+    planExpiresAt: null,
+    vipBadgeType:  demoProvider.vip_badge_type ?? 'vip',
+    updatedAt:     demoProvider.updated_at   ?? null,
   } : {
+    /* ── Fallback estático (mock-data.ts) ── */
     name:          mockProvider!.name,
     description:   mockProvider!.description,
     location:      mockProvider!.location  ?? '',
@@ -249,9 +312,44 @@ export default async function ProviderDetailPage({ params }: Props) {
     featured:      mockProvider!.featured ?? false,
     rating:        mockProvider!.rating,
     reviews:       mockProvider!.reviews,
-    plan:          'free',
-    planExpiresAt: null,
+    plan:          mockProvider!.plan ?? 'vip',
+    planExpiresAt: mockProvider!.planExpiresAt ?? null,
+    vipBadgeType:  mockProvider!.vipBadgeType ?? 'vip',
+    updatedAt:     mockProvider!.updatedAt ?? null,
   }
+
+  const vip = isVip(p.plan, p.planExpiresAt)
+  const onlineStatus = vip ? getOnlineStatus(p.updatedAt) : null
+
+  // VIP Theme — vip_theme_id vem de demo_providers ou providers
+  const vipThemeId = demoProvider?.vip_theme_id ?? (dbProvider as any)?.vip_theme_id ?? null
+  const vipCfg: VipThemeConfig = vip && vipThemeId
+    ? { themeId: vipThemeId as VipThemeId, borderStyle: 'animated', glowIntensity: 'strong', particles: false }
+    : DEFAULT_VIP_CONFIG
+  const vipColors      = vip && vipCfg.themeId ? VIP_THEMES[vipCfg.themeId].colors : null
+  const vipCSS         = vip ? generateVipCSS(vipCfg) : ''
+  const heroBackground = vip && vipColors
+    ? vipColors.cardBg
+    : 'linear-gradient(145deg, #0d0328 0%, #09021c 55%, #060118 100%)'
+  const blobAColor     = vip && vipColors ? vipColors.blobA : 'rgba(124,58,237,0.1)'
+  const blobBColor     = vip && vipColors ? vipColors.blobB : 'rgba(219,39,119,0.07)'
+  const topNeonLine    = vip && vipColors
+    ? `linear-gradient(90deg, transparent, ${vipColors.neonLine} 50%, transparent)`
+    : 'linear-gradient(90deg, transparent, rgba(168,85,247,0.8) 50%, transparent)'
+  const bottomNeonLine = vip && vipColors
+    ? `linear-gradient(90deg, transparent, ${vipColors.border} 50%, transparent)`
+    : 'linear-gradient(90deg, transparent, rgba(139,92,246,0.3) 50%, transparent)'
+  const photoConic     = vip
+    ? getVipConic(vipCfg.themeId)
+    : 'conic-gradient(from 0deg, #7b2ff7 0%, #a855f7 14%, #ec4899 28%, #f43f5e 40%, #fb923c 52%, #facc15 60%, #06b6d4 70%, #3b82f6 82%, #8b5cf6 92%, #7b2ff7 100%)'
+  const pageBg               = vip && vipColors ? vipColors.pageBg : '#04000f'
+  const sectionBarGrad       = vip && vipColors ? vipColors.sectionBar : 'linear-gradient(180deg, #a855f7, #ec4899)'
+  const galleryGlowShadow    = vip && vipColors
+    ? `0 16px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px ${withAlpha(vipColors.glow, 0.15)}`
+    : '0 16px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px rgba(109,40,217,0.12)'
+  const breadcrumbActive     = vip && vipColors ? vipColors.textAccent : '#a78bfa'
+  const vipCoverBg           = vip && vipColors ? vipColors.coverBg : null
+  const vipThemeImage        = vip && vipCfg.themeId ? VIP_THEMES[vipCfg.themeId].image : null
 
   const catNames = p.categories
     .map(id => categories.find(c => c.id === id || c.slug === id))
@@ -265,7 +363,7 @@ export default async function ProviderDetailPage({ params }: Props) {
     <div className="mb-5 flex items-center gap-3">
       <div style={{
         width: '4px', height: '22px', borderRadius: '4px',
-        background: 'linear-gradient(180deg, #a855f7, #ec4899)',
+        background: sectionBarGrad,
         flexShrink: 0,
       }} />
       <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', margin: 0 }}>{label}</h2>
@@ -273,11 +371,145 @@ export default async function ProviderDetailPage({ params }: Props) {
   )
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ background: '#04000f' }}>
-      <style>{CSS}</style>
+    <>
+
+    {/* ══ VIP FIXED ATMOSPHERIC SYSTEM — cobre viewport inteiro, independente do scroll ══ */}
+    {vip && vipThemeImage && vipColors && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', overflow: 'hidden' }}>
+
+        {/* Layer A — imagem do tema: blur + saturação alta para textura atmosférica vibrante */}
+        <div style={{
+          position: 'absolute', inset: '-6%',
+          backgroundImage: `url(${vipThemeImage})`,
+          backgroundSize: 'cover', backgroundPosition: 'center',
+          filter: 'blur(48px) brightness(0.24) saturate(2.2)',
+          willChange: 'transform',
+        }} />
+
+        {/* Layer B — radiais de glow: intensidade alta para contaminar toda a viewport */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: [
+            `radial-gradient(ellipse 100% 72% at 18% 15%, ${withAlpha(vipColors.glow, 0.50)} 0%, transparent 62%)`,
+            `radial-gradient(ellipse 85% 95% at 84% 82%, ${withAlpha(vipColors.glow, 0.42)} 0%, transparent 58%)`,
+            `radial-gradient(ellipse 75% 68% at 52% 48%, ${withAlpha(vipColors.glow, 0.25)} 0%, transparent 68%)`,
+            `radial-gradient(ellipse 120% 55% at 50% 105%, ${withAlpha(vipColors.glow, 0.22)} 0%, transparent 60%)`,
+          ].join(', '),
+        }} />
+
+        {/* Layer C — vinheta lateral suave (não sobrepõe o glow central) */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse 95% 88% at 50% 40%, transparent 32%, rgba(0,0,0,0.50) 100%)',
+        }} />
+
+        {/* Layer D — partículas atmosféricas (CSS-only, GPU-accelerated) */}
+        <div style={{ position: 'absolute', inset: 0 }}>
+          {Array.from({ length: 14 }).map((_, i) => (
+            <div key={i} className="atm-particle" style={{
+              left:       `${6 + (i * 6.8 + 2) % 88}%`,
+              bottom:     `-${4 + (i * 6) % 18}px`,
+              '--sz':     `${2 + (i % 3)}px`,
+              '--dur':    `${11 + (i * 1.4) % 10}s`,
+              '--delay':  `${(i * 0.95) % 11}s`,
+              '--tx':     `${-28 + (i * 14) % 56}px`,
+              '--op':     `${0.18 + (i % 4) * 0.07}`,
+              background: vipColors.primary,
+              boxShadow:  `0 0 ${2 + (i % 4) * 2}px ${vipColors.glow}`,
+            } as React.CSSProperties} />
+          ))}
+        </div>
+
+      </div>
+    )}
+
+    <div className="flex min-h-screen flex-col" style={{ background: vip && vipThemeImage ? 'transparent' : pageBg }}>
+      <style>{`html,body{background:${pageBg};}${vip && vipThemeImage && vipColors ? [
+        // Header semi-transparente para o tema respirar
+        `header{background:rgba(0,0,0,0.32)!important;}`,
+        // Footer: fundo transparente em todos os filhos, tint do tema
+        `footer,footer>*{background:transparent!important;}`,
+        `footer{background:linear-gradient(180deg,${withAlpha(vipColors.glow,0.07)},rgba(0,0,0,0.42))!important;}`,
+        // Headings (LINKS RÁPIDOS, PARA PROFISSIONAIS, CONTATO)
+        `footer h3{color:${vipColors.textAccent}!important;}`,
+        // Stats (500+, 2.5K+, 4.9★) — gradient de texto do tema
+        `footer p.font-black{background-image:linear-gradient(135deg,${vipColors.primary},${vipColors.secondary})!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;}`,
+        // Ícones violet-400 → cor primária do tema
+        `footer .text-violet-400{color:${vipColors.primary}!important;}`,
+        // Botão Cadastrar Grátis → tema
+        `footer a[href="/prestador/cadastro"]{background:${vipColors.buttonBg}!important;box-shadow:0 0 16px ${vipColors.buttonGlow}!important;}`,
+        // Botão newsletter → tema
+        `footer button{background:${vipColors.buttonBg}!important;box-shadow:0 0 12px ${vipColors.buttonGlow}!important;}`,
+        // Linha decorativa do topo do footer → neon do tema
+        `footer .h-px.w-full{background:linear-gradient(90deg,transparent,${vipColors.neonLine} 35%,${withAlpha(vipColors.glow,0.55)} 65%,transparent)!important;}`,
+        // Logo "Imperatriz" span colorido → cor primária do tema
+        `footer span[style]{color:${vipColors.primary}!important;}`,
+        // Logo icon div → gradiente do tema
+        `footer a[href="/"] > div:first-child{background:linear-gradient(135deg,${vipColors.conicA},${vipColors.conicC})!important;box-shadow:0 0 20px ${vipColors.buttonGlow}!important;}`,
+        // Borders dos ícones de contato → tema
+        `footer [style*="138,92,255"]{background:${withAlpha(vipColors.glow,0.15)}!important;border-color:${withAlpha(vipColors.glow,0.25)}!important;}`,
+        // ReviewSection — rating summary cards gradients
+        `.fu4 .from-violet-900\\/30{--tw-gradient-from:${withAlpha(vipColors.glow,0.22)}!important;}`,
+        `.fu4 .to-fuchsia-900\\/20{--tw-gradient-to:${withAlpha(vipColors.glow,0.10)}!important;}`,
+        `.fu4 .from-violet-900\\/20{--tw-gradient-from:${withAlpha(vipColors.glow,0.15)}!important;}`,
+        `.fu4 .to-fuchsia-900\\/10{--tw-gradient-to:${withAlpha(vipColors.glow,0.06)}!important;}`,
+        // ReviewSection — icon & action card backgrounds
+        `.fu4 .bg-violet-500\\/20{background-color:${withAlpha(vipColors.glow,0.22)}!important;}`,
+        `.fu4 .bg-violet-500\\/10{background-color:${withAlpha(vipColors.glow,0.10)}!important;}`,
+        // ReviewSection — text colors
+        `.fu4 .text-violet-400{color:${vipColors.primary}!important;}`,
+        `.fu4 .text-violet-400\\/70{color:${vipColors.primary}!important;opacity:0.7;}`,
+        `.fu4 .text-violet-300{color:${vipColors.secondary}!important;}`,
+        // ReviewSection — borders
+        `.fu4 .border-violet-500\\/20{border-color:${withAlpha(vipColors.glow,0.20)}!important;}`,
+        `.fu4 .border-violet-500\\/30{border-color:${withAlpha(vipColors.glow,0.30)}!important;}`,
+        // ReviewSection — gradient buttons & avatar circles
+        `.fu4 .from-violet-600{--tw-gradient-from:${vipColors.primary}!important;}`,
+        `.fu4 .to-fuchsia-500{--tw-gradient-to:${vipColors.secondary}!important;}`,
+        // ReviewSection — hover & focus states
+        `.fu4 .hover\\:border-violet-500\\/20:hover{border-color:${withAlpha(vipColors.glow,0.20)}!important;}`,
+        `.fu4 .hover\\:bg-violet-500\\/20:hover{background-color:${withAlpha(vipColors.glow,0.22)}!important;}`,
+        `.fu4 .focus\\:border-violet-500\\/50:focus{border-color:${withAlpha(vipColors.glow,0.50)}!important;}`,
+      ].join('') : ''}` + CSS + (vip ? '\n' + vipCSS : '')}</style>
       <Header />
 
-      <main className="flex-1">
+      <main className="flex-1" style={{ position: 'relative' }}>
+
+        {/* ── VIP Ambient Atmosphere — cobre toda a área do perfil ── */}
+        {vip && vipColors && (
+          <>
+            <div style={{
+              position: 'absolute', top: 0, left: '-10%',
+              width: '75%', height: '65vw', borderRadius: '50%',
+              background: withAlpha(vipColors.glow, 0.11),
+              filter: 'blur(180px)', pointerEvents: 'none', zIndex: 0,
+            }} />
+            <div style={{
+              position: 'absolute', top: '30vw', right: '-5%',
+              width: '60%', height: '55vw', borderRadius: '50%',
+              background: withAlpha(vipColors.glow, 0.08),
+              filter: 'blur(160px)', pointerEvents: 'none', zIndex: 0,
+            }} />
+            <div style={{
+              position: 'absolute', top: '75vw', left: '5%',
+              width: '65%', height: '55vw', borderRadius: '50%',
+              background: withAlpha(vipColors.glow, 0.06),
+              filter: 'blur(170px)', pointerEvents: 'none', zIndex: 0,
+            }} />
+          </>
+        )}
+
+        {/* ── VIP Cinematic Cover — topo até o fim da página ── */}
+        {vip && vipCoverBg && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: '100vh',
+            background: vipCoverBg,
+            zIndex: 0, pointerEvents: 'none',
+          }} />
+        )}
+
+        {/* ── Conteúdo do perfil — acima das camadas de fundo ── */}
+        <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── Breadcrumb ── */}
         <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
@@ -287,7 +519,7 @@ export default async function ProviderDetailPage({ params }: Props) {
               <ChevronRight className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.2)' }} />
               <Link href="/prestadores" style={{ color: 'rgba(255,255,255,0.35)' }} className="transition-colors hover:text-violet-400">Prestadores</Link>
               <ChevronRight className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.2)' }} />
-              <span style={{ color: '#a78bfa', fontWeight: 600 }}>{p.name}</span>
+              <span style={{ color: breadcrumbActive, fontWeight: 600 }}>{p.name}</span>
             </nav>
           </div>
         </div>
@@ -301,23 +533,56 @@ export default async function ProviderDetailPage({ params }: Props) {
               className="hero-glow relative overflow-hidden"
               style={{
                 borderRadius: '24px',
-                background: 'linear-gradient(145deg, #0d0328 0%, #09021c 55%, #060118 100%)',
+                background: heroBackground,
               }}
             >
               {/* Linha neon no topo */}
               <div style={{
                 position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
-                background: 'linear-gradient(90deg, transparent, rgba(168,85,247,0.8) 50%, transparent)',
+                background: topNeonLine,
               }} />
               {/* Glows de fundo */}
               <div style={{
                 position: 'absolute', top: '-60px', right: '-60px', width: '300px', height: '300px',
-                borderRadius: '50%', background: 'rgba(124,58,237,0.1)', filter: 'blur(60px)', pointerEvents: 'none',
+                borderRadius: '50%', background: blobAColor, filter: 'blur(60px)', pointerEvents: 'none',
               }} />
               <div style={{
                 position: 'absolute', bottom: '-40px', left: '200px', width: '220px', height: '220px',
-                borderRadius: '50%', background: 'rgba(219,39,119,0.07)', filter: 'blur(50px)', pointerEvents: 'none',
+                borderRadius: '50%', background: blobBColor, filter: 'blur(50px)', pointerEvents: 'none',
               }} />
+
+              {/* ── VIP: imagem cinematográfica — cobre todo o card ── */}
+              {vip && vipThemeImage && (
+                <>
+                  {/* Imagem full-card — base cinematográfica */}
+                  <div
+                    className="hidden sm:block"
+                    style={{
+                      position: 'absolute', inset: 0,
+                      backgroundImage: `url(${vipThemeImage})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center center',
+                      opacity: 0.42,
+                      zIndex: 0,
+                    }}
+                  />
+                  {/* Overlay de legibilidade: gradiente esquerda + vinheta top/bottom */}
+                  <div
+                    className="hidden sm:block"
+                    style={{
+                      position: 'absolute', inset: 0,
+                      background: [
+                        `linear-gradient(105deg, ${pageBg} 0%, ${pageBg} 20%, rgba(0,0,0,0.82) 40%, rgba(0,0,0,0.38) 62%, rgba(0,0,0,0.08) 100%)`,
+                        `linear-gradient(180deg, rgba(0,0,0,0.28) 0%, transparent 22%, transparent 68%, rgba(0,0,0,0.52) 100%)`,
+                      ].join(', '),
+                      zIndex: 1,
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Conteúdo do hero — acima da imagem de fundo */}
+              <div style={{ position: 'relative', zIndex: 2 }}>
 
               {/* ── Mobile: portrait card com borda neon (idêntico ao desktop) ── */}
               <div
@@ -342,7 +607,7 @@ export default async function ProviderDetailPage({ params }: Props) {
                     style={{
                       position: 'absolute',
                       width: '200%', height: '200%', top: '-50%', left: '-50%',
-                      background: 'conic-gradient(from 0deg, #7b2ff7 0%, #a855f7 14%, #ec4899 28%, #f43f5e 40%, #fb923c 52%, #facc15 60%, #06b6d4 70%, #3b82f6 82%, #8b5cf6 92%, #7b2ff7 100%)',
+                      background: photoConic,
                     }}
                   />
 
@@ -424,7 +689,7 @@ export default async function ProviderDetailPage({ params }: Props) {
                       style={{
                         position: 'absolute',
                         width: '200%', height: '200%', top: '-50%', left: '-50%',
-                        background: 'conic-gradient(from 0deg, #7b2ff7 0%, #a855f7 14%, #ec4899 28%, #f43f5e 40%, #fb923c 52%, #facc15 60%, #06b6d4 70%, #3b82f6 82%, #8b5cf6 92%, #7b2ff7 100%)',
+                        background: photoConic,
                       }}
                     />
 
@@ -490,12 +755,13 @@ export default async function ProviderDetailPage({ params }: Props) {
 
                   {/* Nome + verificação */}
                   <div>
-                    {isPremiumActive(p.plan, p.planExpiresAt) && (
-                      <div style={{ marginBottom: '8px' }}>
-                        <PlanBadge size="sm" />
+                    {vip && (
+                      <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <PlanBadge size="sm" badgeType={p.vipBadgeType} />
+                        {onlineStatus && <OnlineStatus status={onlineStatus} variant="profile" />}
                       </div>
                     )}
-                    {!isPremiumActive(p.plan, p.planExpiresAt) && p.featured && (
+                    {!vip && p.featured && (
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '4px',
                         background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
@@ -591,7 +857,7 @@ export default async function ProviderDetailPage({ params }: Props) {
                         <Phone style={{ width: '14px', height: '14px' }} /> {p.phone}
                       </a>
                     )}
-                    <ShareButton name={p.name} />
+                    {vip && <ShareButton name={p.name} />}
                   </div>
 
                   {/* Separador */}
@@ -609,10 +875,12 @@ export default async function ProviderDetailPage({ params }: Props) {
                 </div>
               </div>
 
+              </div>{/* / conteúdo do hero acima da imagem */}
+
               {/* Linha neon no rodapé */}
               <div style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, height: '1px',
-                background: 'linear-gradient(90deg, transparent, rgba(139,92,246,0.3) 50%, transparent)',
+                background: bottomNeonLine,
               }} />
             </div>
           </div>
@@ -628,7 +896,7 @@ export default async function ProviderDetailPage({ params }: Props) {
                 borderRadius: '20px', overflow: 'hidden',
                 aspectRatio: '16 / 9',
                 background: '#07010f',
-                boxShadow: '0 16px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px rgba(109,40,217,0.12)',
+                boxShadow: galleryGlowShadow,
               }}>
                 <ProfileCarousel images={p.images} coverPosition={p.coverPosition} name={p.name} />
               </div>
@@ -765,20 +1033,37 @@ export default async function ProviderDetailPage({ params }: Props) {
                   </div>
                 </div>
 
+                {/* Legal disclaimer */}
+                <div style={{
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.22)', lineHeight: 1.6, margin: 0 }}>
+                    Este profissional é autônomo e independente. A ServiçosImperatriz atua exclusivamente como canal de visibilidade e conexão, não sendo responsável pela execução ou resultado dos serviços. Contrate com consciência.
+                  </p>
+                </div>
+
               </div>
             </div>
           </div>
         </section>
 
         {/* ══════════════════════════════════════════════
-            4. AVALIAÇÕES
+            4. CATÁLOGO / CARDÁPIO
+        ══════════════════════════════════════════════ */}
+        <CatalogSection slug={p.slug} waLink={waLink} sectionBarGrad={sectionBarGrad} />
+
+        {/* ══════════════════════════════════════════════
+            5. AVALIAÇÕES
         ══════════════════════════════════════════════ */}
         <section className="fu4 px-4" style={{ paddingBottom: '96px' }}>
           <div className="mx-auto" style={{ maxWidth: '1100px' }}>
             <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '5px', height: '24px', borderRadius: '4px',
-                background: 'linear-gradient(180deg, #a855f7, #ec4899)', flexShrink: 0,
+                background: sectionBarGrad, flexShrink: 0,
               }} />
               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#fff', margin: 0 }}>Avaliações</h2>
               {p.reviews > 0 && (
@@ -794,10 +1079,12 @@ export default async function ProviderDetailPage({ params }: Props) {
           </div>
         </section>
 
+        </div>{/* / content wrapper */}
       </main>
 
       <Footer />
       {waLink && <FloatingWhatsApp waLink={waLink} name={p.name} />}
     </div>
+    </>
   )
 }

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 /* ─────────────────── tipos ─────────────────── */
-type Tab = 'dashboard' | 'ads' | 'users' | 'categories' | 'reviews' | 'gallery' | 'messages' | 'compliance' | 'reports'
+type Tab = 'dashboard' | 'ads' | 'users' | 'categories' | 'reviews' | 'gallery' | 'messages' | 'compliance' | 'reports' | 'demos' | 'financeiro'
 
 type Ad = {
   id: string
@@ -55,6 +55,7 @@ type ComplianceRow = {
 type UserRow = {
   id: string; email: string; full_name: string | null; user_type: string | null
   created_at: string; avatar_url: string | null; provider_name?: string | null
+  plan?: string | null; plan_expires_at?: string | null; vip_badge_type?: string | null
 }
 type ReviewRow = {
   id: string; reviewer_name: string | null; rating: number; comment: string | null
@@ -119,6 +120,8 @@ export default function AdminPanel() {
     { id: 'messages',    label: 'Mensagens',      icon: MessageSquare },
     { id: 'compliance',  label: 'Conformidade',   icon: ScrollText },
     { id: 'reports',     label: 'Denúncias',      icon: Flag },
+    { id: 'demos',       label: 'Perfis Demo',    icon: Eye },
+    { id: 'financeiro',  label: 'Financeiro',     icon: BarChart2 },
   ]
 
   function Sidebar({ mobile }: { mobile?: boolean }) {
@@ -222,6 +225,8 @@ export default function AdminPanel() {
           {tab === 'messages'   && <MessagesTab />}
           {tab === 'compliance' && <ComplianceTab />}
           {tab === 'reports'    && <ReportsTab />}
+          {tab === 'demos'      && <DemosTab />}
+          {tab === 'financeiro' && <FinanceiroTab />}
         </main>
       </div>
     </div>
@@ -1336,12 +1341,16 @@ function UsersTab() {
   const [loading,       setLoading]       = useState(true)
   const [search,        setSearch]        = useState('')
   const [typeFilter,    setTypeFilter]    = useState<'all' | 'prestador' | 'cliente'>('all')
+  const [vipFilter,     setVipFilter]     = useState<'all' | 'vip' | 'free' | 'expired'>('all')
   const [toast,         setToast]         = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [msgTarget,     setMsgTarget]     = useState<UserRow | null>(null)
   const [msgForm,       setMsgForm]       = useState({ title: '', body: '', type: 'info' })
   const [sendingMsg,    setSendingMsg]    = useState(false)
   const [detailUser,    setDetailUser]    = useState<UserRow | null>(null)
+  const [vipTarget,     setVipTarget]     = useState<UserRow | null>(null)
+  const [vipForm,       setVipForm]       = useState({ days: 30, badgeType: 'vip' })
+  const [vipLoading,    setVipLoading]    = useState(false)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -1370,24 +1379,111 @@ function UsersTab() {
     setSendingMsg(false)
   }
 
+  function isUserVipActive(u: UserRow) {
+    if (u.plan !== 'vip' && u.plan !== 'premium') return false
+    if (!u.plan_expires_at) return true
+    return new Date(u.plan_expires_at) > new Date()
+  }
+
+  async function handleVipAction(userId: string, action: 'activate' | 'deactivate' | 'renew') {
+    setVipLoading(true)
+    const r = await fetch('/api/admin/vip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, action, days: vipForm.days, badgeType: vipForm.badgeType }),
+    })
+    if (r.ok) {
+      const updated = await r.json()
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: updated.plan, plan_expires_at: updated.plan_expires_at ?? null } : u))
+      setToast({ msg: action === 'deactivate' ? 'VIP removido.' : 'VIP ativado com sucesso!', type: 'success' })
+      setVipTarget(null)
+    } else {
+      setToast({ msg: 'Erro ao atualizar plano VIP.', type: 'error' })
+    }
+    setVipLoading(false)
+  }
+
   const filtered = users.filter(u => {
     const matchType = typeFilter === 'all' || u.user_type === typeFilter
+    const vipActive = isUserVipActive(u)
+    const vipExpired = (u.plan === 'vip' || u.plan === 'premium') && !vipActive
+    const matchVip = vipFilter === 'all' ||
+      (vipFilter === 'vip'     && vipActive) ||
+      (vipFilter === 'free'    && !vipActive && !vipExpired) ||
+      (vipFilter === 'expired' && vipExpired)
     const q = search.toLowerCase()
     const matchSearch = !q ||
       (u.email?.toLowerCase().includes(q) ||
       (u.full_name ?? '').toLowerCase().includes(q))
-    return matchType && matchSearch
+    return matchType && matchVip && matchSearch
   })
 
   const stats = {
     total:      users.length,
     prestador:  users.filter(u => u.user_type === 'prestador').length,
     cliente:    users.filter(u => u.user_type === 'cliente').length,
+    vip:        users.filter(u => isUserVipActive(u)).length,
   }
 
   return (
     <div>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* VIP modal */}
+      {vipTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/75" onClick={() => setVipTarget(null)} />
+          <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-amber-500/20 shadow-[0_32px_80px_rgba(0,0,0,0.8)]"
+            style={{ background: '#0e0625' }}>
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+            <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
+              <h3 className="font-bold text-white">Gerenciar VIP</h3>
+              <button onClick={() => setVipTarget(null)} className="text-white/40 hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-white/60">
+                <span className="font-semibold text-white">{vipTarget.full_name ?? vipTarget.email}</span>
+                {' — '}plano atual: <span className={`font-semibold ${isUserVipActive(vipTarget) ? 'text-amber-400' : 'text-white/40'}`}>
+                  {isUserVipActive(vipTarget) ? 'VIP ativo' : 'Gratuito'}
+                </span>
+                {vipTarget.plan_expires_at && (
+                  <span className="ml-1 text-xs text-white/30">(expira {fmt(vipTarget.plan_expires_at)})</span>
+                )}
+              </p>
+              <div>
+                <label className="mb-1 block text-xs text-white/50">Tipo de selo</label>
+                <select value={vipForm.badgeType} onChange={e => setVipForm(f => ({ ...f, badgeType: e.target.value }))}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-amber-500/50 focus:outline-none">
+                  <option value="vip">👑 VIP</option>
+                  <option value="premium">⭐ Premium</option>
+                  <option value="destaque">🔵 Em Destaque</option>
+                  <option value="top_regional">🏆 Top Regional</option>
+                  <option value="perfil_premium">✦ Perfil Premium</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-white/50">Duração (dias)</label>
+                <input type="number" min={1} max={3650} value={vipForm.days}
+                  onChange={e => setVipForm(f => ({ ...f, days: parseInt(e.target.value) || 30 }))}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-amber-500/50 focus:outline-none" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => handleVipAction(vipTarget.id, isUserVipActive(vipTarget) ? 'renew' : 'activate')} disabled={vipLoading}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 py-2.5 text-xs font-bold text-black disabled:opacity-60">
+                  {vipLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '👑'}
+                  {isUserVipActive(vipTarget) ? 'Renovar VIP' : 'Ativar VIP'}
+                </button>
+                {isUserVipActive(vipTarget) && (
+                  <button onClick={() => handleVipAction(vipTarget.id, 'deactivate')} disabled={vipLoading}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-60">
+                    Remover VIP
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal detalhe usuário */}
       {detailUser && (
@@ -1429,19 +1525,38 @@ function UsersTab() {
                   <span className={`text-sm text-white/80 truncate ${mono ? 'font-mono text-violet-400' : ''}`}>{value}</span>
                 </div>
               ))}
+              {detailUser.user_type === 'prestador' && (
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-500/15 bg-amber-500/5 px-3 py-2">
+                  <span className="text-xs text-white/40">Plano VIP</span>
+                  <span className={`text-sm font-semibold ${isUserVipActive(detailUser) ? 'text-amber-400' : 'text-white/30'}`}>
+                    {isUserVipActive(detailUser)
+                      ? `Ativo${detailUser.plan_expires_at ? ` até ${fmt(detailUser.plan_expires_at)}` : ''}`
+                      : 'Gratuito'}
+                  </span>
+                </div>
+              )}
             </div>
             {/* Actions */}
-            <div className="flex gap-2 border-t border-white/8 px-6 py-4">
-              <button
-                onClick={() => { setMsgTarget(detailUser); setDetailUser(null) }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-500/15 border border-violet-500/25 py-2.5 text-xs font-semibold text-violet-400 hover:bg-violet-500/25 transition-all">
-                <MessageSquare className="h-3.5 w-3.5" /> Mensagem
-              </button>
-              <button
-                onClick={() => { setDeleteConfirm(detailUser.id); setDetailUser(null) }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-all">
-                <UserX className="h-3.5 w-3.5" /> Remover
-              </button>
+            <div className="flex flex-col gap-2 border-t border-white/8 px-6 py-4">
+              {detailUser.user_type === 'prestador' && (
+                <button
+                  onClick={() => { setVipTarget(detailUser); setVipForm({ days: 30, badgeType: detailUser.vip_badge_type ?? 'vip' }); setDetailUser(null) }}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600/30 to-yellow-500/20 border border-amber-500/30 py-2.5 text-xs font-semibold text-amber-300 hover:from-amber-600/40 transition-all">
+                  <Award className="h-3.5 w-3.5" /> {isUserVipActive(detailUser) ? 'Gerenciar VIP' : 'Tornar VIP'}
+                </button>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setMsgTarget(detailUser); setDetailUser(null) }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-500/15 border border-violet-500/25 py-2.5 text-xs font-semibold text-violet-400 hover:bg-violet-500/25 transition-all">
+                  <MessageSquare className="h-3.5 w-3.5" /> Mensagem
+                </button>
+                <button
+                  onClick={() => { setDeleteConfirm(detailUser.id); setDetailUser(null) }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-all">
+                  <UserX className="h-3.5 w-3.5" /> Remover
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1476,10 +1591,11 @@ function UsersTab() {
         </div>
       )}
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-5 grid gap-4 sm:grid-cols-4">
         <StatCard label="Total de Usuários" value={stats.total}     color="text-white" />
         <StatCard label="Prestadores"       value={stats.prestador} color="text-violet-400" />
         <StatCard label="Clientes"          value={stats.cliente}   color="text-fuchsia-400" />
+        <StatCard label="VIP Ativos"        value={stats.vip}       color="text-amber-400" />
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -1498,6 +1614,14 @@ function UsersTab() {
               </button>
             )
           })}
+        </div>
+        <div className="flex gap-1">
+          {([['all','Todos'],['vip','👑 VIP'],['free','Gratuito'],['expired','Expirado']] as const).map(([val, label]) => (
+            <button key={val} onClick={() => setVipFilter(val as typeof vipFilter)}
+              className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${vipFilter === val ? 'bg-amber-600/80 text-white' : 'border border-white/10 text-white/40 hover:bg-white/5 hover:text-white'}`}>
+              {label}
+            </button>
+          ))}
         </div>
         <button onClick={fetchUsers} className="rounded-xl border border-white/10 p-2.5 text-white/50 hover:bg-white/5 hover:text-white">
           <RefreshCw className="h-4 w-4" />
@@ -1536,13 +1660,26 @@ function UsersTab() {
                       </div>
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${u.user_type === 'prestador' ? 'bg-violet-500/20 text-violet-300' : 'bg-white/10 text-white/50'}`}>
-                        {u.user_type === 'prestador' ? 'Prestador' : 'Cliente'}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${u.user_type === 'prestador' ? 'bg-violet-500/20 text-violet-300' : 'bg-white/10 text-white/50'}`}>
+                          {u.user_type === 'prestador' ? 'Prestador' : 'Cliente'}
+                        </span>
+                        {isUserVipActive(u) && (
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24' }}>
+                            👑 VIP
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="hidden px-4 py-3 text-xs text-white/40 md:table-cell">{fmt(u.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
+                        {u.user_type === 'prestador' && (
+                          <button onClick={e => { e.stopPropagation(); setVipTarget(u); setVipForm({ days: 30, badgeType: u.vip_badge_type ?? 'vip' }) }} title="Gerenciar VIP"
+                            className={`rounded-lg p-1.5 transition-colors ${isUserVipActive(u) ? 'text-amber-400 hover:bg-amber-500/10' : 'text-white/40 hover:bg-amber-500/10 hover:text-amber-400'}`}>
+                            <Award className="h-4 w-4" />
+                          </button>
+                        )}
                         <button onClick={e => { e.stopPropagation(); setMsgTarget(u) }} title="Enviar mensagem"
                           className="rounded-lg p-1.5 text-white/40 hover:bg-violet-500/10 hover:text-violet-400 transition-colors">
                           <MessageSquare className="h-4 w-4" />
@@ -2817,3 +2954,874 @@ function ReportsTab() {
     </div>
   )
 }
+
+/* ═══════════════════════════════════════════════════
+   DEMOS TAB
+═══════════════════════════════════════════════════ */
+
+type DemoRow = {
+  id: string; name: string; slug: string; category: string; category_slug: string
+  rating: number; reviews: number; description: string; image: string
+  avatar_image?: string | null
+  carousel_images?: string[]
+  phone: string; whatsapp: string; location: string; vip_badge_type: string; vip_theme_id?: string | null; active: boolean
+}
+
+const DEMO_VIP_THEMES = [
+  { id: null,        name: 'Original',      emoji: '⚙️',  primary: '#8A5CFF' },
+  { id: 'galaxy',    name: 'Galaxy Neon',   emoji: '🌌',  primary: '#818cf8' },
+  { id: 'cyberpunk', name: 'Cyberpunk',     emoji: '⚡',  primary: '#fbbf24' },
+  { id: 'gold',      name: 'Gold Prestige', emoji: '👑',  primary: '#f59e0b' },
+  { id: 'sakura',    name: 'Sakura Pink',   emoji: '🌸',  primary: '#f472b6' },
+  { id: 'lava',      name: 'Lava Inferno',  emoji: '🔥',  primary: '#f97316' },
+  { id: 'ocean',     name: 'Ocean Blue',    emoji: '🌊',  primary: '#22d3ee' },
+  { id: 'aurora',    name: 'Aurora Boreal', emoji: '🌌',  primary: '#00d4aa' },
+  { id: 'diamond',   name: 'Diamond Ice',   emoji: '💎',  primary: '#a8d8ea' },
+  { id: 'emerald',   name: 'Emerald Lux',   emoji: '💚',  primary: '#10b981' },
+  { id: 'sunset',    name: 'Sunset Glow',   emoji: '🌅',  primary: '#fb923c' },
+  { id: 'royal',     name: 'Royal Purple',  emoji: '🔮',  primary: '#7c3aed' },
+  { id: 'rainbow',   name: 'Neon Rainbow',  emoji: '🌈',  primary: '#f0abfc' },
+  { id: 'dark',      name: 'Dark Elite',    emoji: '🖤',  primary: '#f1f5f9' },
+  { id: 'obsidian',  name: 'Obsidian Red',  emoji: '🔴',  primary: '#dc2626' },
+  { id: 'heaven',    name: 'Heaven Light',  emoji: '✨',  primary: '#fde68a' },
+  { id: 'phantom',   name: 'Phantom Blue',  emoji: '👻',  primary: '#3b82f6' },
+]
+
+const DEMO_BADGE_OPTIONS = [
+  { value: 'vip',            label: '👑 VIP',            border: '#fbbf24', bg: 'rgba(251,191,36,0.15)' },
+  { value: 'premium',        label: '⭐ Premium',        border: '#c4b5fd', bg: 'rgba(139,92,246,0.15)' },
+  { value: 'destaque',       label: '🔵 Em Destaque',    border: '#93c5fd', bg: 'rgba(59,130,246,0.15)' },
+  { value: 'top_regional',   label: '🏆 Top Regional',   border: '#fda4af', bg: 'rgba(239,68,68,0.15)'  },
+  { value: 'perfil_premium', label: '✦ Perfil Premium',  border: '#6ee7b7', bg: 'rgba(16,185,129,0.15)' },
+]
+
+const SQL_CREATE = `-- Execute no Supabase SQL Editor:
+CREATE TABLE IF NOT EXISTS demo_providers (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  slug text UNIQUE NOT NULL,
+  category text NOT NULL DEFAULT '',
+  category_slug text NOT NULL DEFAULT '',
+  rating numeric(2,1) DEFAULT 5.0,
+  reviews int DEFAULT 0,
+  description text DEFAULT '',
+  image text DEFAULT '',
+  phone text DEFAULT '',
+  whatsapp text DEFAULT '',
+  location text DEFAULT '',
+  vip_badge_type text DEFAULT 'vip',
+  updated_at timestamptz DEFAULT now(),
+  active boolean DEFAULT true
+);`
+
+function DemosTab() {
+  const [demos, setDemos] = useState<DemoRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tableExists, setTableExists] = useState(true)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [form, setForm] = useState<Partial<DemoRow>>({})
+  const [saving, setSaving] = useState(false)
+  const [uploadingImg, setUploadingImg] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [uploadingCarousel, setUploadingCarousel] = useState(false)
+  const [carouselDragIdx, setCarouselDragIdx] = useState<number | null>(null)
+  const [carouselDragOver, setCarouselDragOver] = useState<number | null>(null)
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
+  const [showSql, setShowSql] = useState(false)
+  const imgInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const carouselInputRef = useRef<HTMLInputElement>(null)
+
+  const fetchDemos = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/demos')
+      const json = await res.json()
+      setTableExists(json.tableExists ?? false)
+      setDemos(json.data ?? [])
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchDemos() }, [fetchDemos])
+
+  function openEdit(d: DemoRow) {
+    setEditId(d.id)
+    setForm({ ...d, carousel_images: d.carousel_images ?? [] })
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editId) return
+    setSaving(true)
+    const r = await fetch(`/api/admin/demos/${editId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    if (r.ok) {
+      setToast({ msg: 'Perfil demo atualizado!', type: 'success' })
+      setEditId(null)
+      fetchDemos()
+    } else {
+      const d = await r.json()
+      setToast({ msg: d.error ?? 'Erro ao salvar', type: 'error' })
+    }
+    setSaving(false)
+  }
+
+  async function uploadFile(file: File): Promise<string | null> {
+    const fd = new FormData()
+    fd.append('file', file)
+    const r = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+    const json = await r.json()
+    if (json.url) return json.url
+    setToast({ msg: json.error ?? 'Erro ao enviar imagem', type: 'error' })
+    return null
+  }
+
+  async function handleImageUpload(file: File) {
+    setUploadingImg(true)
+    try {
+      const url = await uploadFile(file)
+      if (url) { setForm(f => ({ ...f, image: url })); setToast({ msg: 'Imagem de capa enviada!', type: 'success' }) }
+    } catch { setToast({ msg: 'Erro ao enviar imagem', type: 'error' }) }
+    finally { setUploadingImg(false) }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    setUploadingAvatar(true)
+    try {
+      const url = await uploadFile(file)
+      if (url) { setForm(f => ({ ...f, avatar_image: url })); setToast({ msg: 'Foto de perfil enviada!', type: 'success' }) }
+    } catch { setToast({ msg: 'Erro ao enviar foto', type: 'error' }) }
+    finally { setUploadingAvatar(false) }
+  }
+
+  async function handleCarouselUpload(files: FileList) {
+    const current = form.carousel_images ?? []
+    const remaining = 10 - current.length
+    if (remaining <= 0) { setToast({ msg: 'Máximo de 10 imagens atingido', type: 'error' }); return }
+    setUploadingCarousel(true)
+    const uploaded: string[] = []
+    for (const file of Array.from(files).slice(0, remaining)) {
+      const url = await uploadFile(file)
+      if (url) uploaded.push(url)
+    }
+    if (uploaded.length > 0) {
+      setForm(f => ({ ...f, carousel_images: [...(f.carousel_images ?? []), ...uploaded] }))
+      setToast({ msg: `${uploaded.length} foto(s) adicionada(s) ao carrossel!`, type: 'success' })
+    }
+    setUploadingCarousel(false)
+  }
+
+  function carouselRemove(url: string) {
+    setForm(f => {
+      const imgs = (f.carousel_images ?? []).filter(u => u !== url)
+      const image = f.image === url ? (imgs[0] ?? '') : f.image
+      return { ...f, carousel_images: imgs, image }
+    })
+  }
+
+  function carouselSetPrimary(url: string) {
+    setForm(f => ({ ...f, image: url }))
+    setToast({ msg: 'Imagem definida como capa principal!', type: 'success' })
+  }
+
+  function onCarouselDragStart(i: number) { setCarouselDragIdx(i) }
+  function onCarouselDragOver(e: React.DragEvent, i: number) { e.preventDefault(); setCarouselDragOver(i) }
+  function onCarouselDrop(i: number) {
+    if (carouselDragIdx === null || carouselDragIdx === i) { setCarouselDragIdx(null); setCarouselDragOver(null); return }
+    const imgs = [...(form.carousel_images ?? [])]
+    const [moved] = imgs.splice(carouselDragIdx, 1)
+    imgs.splice(i, 0, moved)
+    setForm(f => ({ ...f, carousel_images: imgs }))
+    setCarouselDragIdx(null); setCarouselDragOver(null)
+  }
+
+  const badgeColor: Record<string, string> = {
+    vip: '#fbbf24', premium: '#c4b5fd', destaque: '#93c5fd', top_regional: '#fda4af', perfil_premium: '#6ee7b7',
+  }
+
+  if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-violet-400" /></div>
+
+  if (!tableExists) return (
+    <div className="space-y-4">
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <div className="rounded-3xl border border-amber-500/30 bg-amber-500/5 p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/20 flex-shrink-0">
+            <AlertCircle className="h-5 w-5 text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-white">Tabela não encontrada</h3>
+            <p className="mt-1 text-sm text-white/60">
+              A tabela <code className="rounded bg-white/10 px-1 py-0.5 text-amber-300">demo_providers</code> ainda não existe no Supabase.
+              Execute o SQL abaixo no <strong className="text-white">SQL Editor</strong> do Supabase e recarregue.
+            </p>
+            <button
+              onClick={() => setShowSql(!showSql)}
+              className="mt-3 flex items-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-500/25 transition-all"
+            >
+              <FileText className="h-4 w-4" /> {showSql ? 'Ocultar SQL' : 'Ver SQL para criar tabela'}
+            </button>
+            {showSql && (
+              <pre className="mt-3 overflow-x-auto rounded-2xl bg-black/40 p-4 text-xs text-green-300 leading-relaxed border border-white/10">
+                {SQL_CREATE}
+              </pre>
+            )}
+          </div>
+        </div>
+      </div>
+      <button onClick={fetchDemos} className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-all">
+        <RefreshCw className="h-4 w-4" /> Verificar novamente
+      </button>
+    </div>
+  )
+
+  /* ── EDIT FORM ── */
+  if (editId) {
+    const d = demos.find(x => x.id === editId)!
+    return (
+      <div>
+        {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+        <div className="mb-5 flex items-center gap-3">
+          <button onClick={() => setEditId(null)} className="rounded-xl border border-white/10 p-2 text-white/40 hover:bg-white/5 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+          <div>
+            <h2 className="font-bold text-white">Editar: {d.name}</h2>
+            <p className="text-xs text-white/40">Slug: <span className="text-violet-300">{d.slug}</span></p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-5 rounded-3xl border border-violet-500/20 bg-white/5 p-6">
+
+          {/* Preview da imagem */}
+          <div className="flex items-center gap-4">
+            <div className="h-20 w-28 flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+              {form.image
+                ? <img src={form.image} alt="" className="h-full w-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                : <div className="flex h-full items-center justify-center text-white/20 text-2xl">🖼</div>
+              }
+            </div>
+            <div className="flex-1 space-y-2">
+              <label className="block text-sm font-medium text-white/60">Imagem de Capa</label>
+              <div className="flex gap-2">
+                <input
+                  value={form.image ?? ''}
+                  onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
+                  placeholder="https://... ou clique em Fazer Upload"
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => imgInputRef.current?.click()}
+                  disabled={uploadingImg}
+                  className="flex items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 transition-all disabled:opacity-50 flex-shrink-0"
+                >
+                  {uploadingImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  {uploadingImg ? 'Enviando…' : 'Upload'}
+                </button>
+              </div>
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = '' }}
+              />
+              <p className="text-[11px] text-white/25">Cole uma URL pública ou faça upload de JPG/PNG/WEBP (máx 5 MB).</p>
+            </div>
+          </div>
+
+          {/* Foto de Perfil (avatar retrato) */}
+          <div className="flex items-center gap-4">
+            <div className="h-20 w-16 flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5" style={{ aspectRatio: '9/16' }}>
+              {form.avatar_image
+                ? <img src={form.avatar_image} alt="" className="h-full w-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                : <div className="flex h-full items-center justify-center text-white/20 text-xl">👤</div>
+              }
+            </div>
+            <div className="flex-1 space-y-2">
+              <label className="block text-sm font-medium text-white/60">Foto de Perfil <span className="text-white/30">(retrato 9:16 — aparece no card principal)</span></label>
+              <div className="flex gap-2">
+                <input
+                  value={form.avatar_image ?? ''}
+                  onChange={e => setForm(f => ({ ...f, avatar_image: e.target.value }))}
+                  placeholder="https://... ou clique em Fazer Upload"
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="flex items-center gap-1.5 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-2 text-xs font-semibold text-fuchsia-300 hover:bg-fuchsia-500/20 transition-all disabled:opacity-50 flex-shrink-0"
+                >
+                  {uploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  {uploadingAvatar ? 'Enviando…' : 'Upload'}
+                </button>
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = '' }}
+              />
+              <p className="text-[11px] text-white/25">Ideal: foto vertical (retrato). Deixe vazio para exibir a inicial do nome.</p>
+            </div>
+          </div>
+
+          {/* ── Galeria / Carrossel ── */}
+          <div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Galeria / Carrossel</p>
+                <p className="text-[11px] text-white/35">
+                  {(form.carousel_images ?? []).length}/10 imagens · arraste para reordenar · primeira = capa
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => carouselInputRef.current?.click()}
+                disabled={uploadingCarousel || (form.carousel_images ?? []).length >= 10}
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/15 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/25 transition-all disabled:opacity-40"
+              >
+                {uploadingCarousel
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Enviando…</>
+                  : <><Plus className="h-3.5 w-3.5" /> Adicionar fotos</>}
+              </button>
+              <input
+                ref={carouselInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={e => { if (e.target.files?.length) handleCarouselUpload(e.target.files); e.target.value = '' }}
+              />
+            </div>
+
+            {(form.carousel_images ?? []).length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {(form.carousel_images ?? []).map((url, i) => {
+                  const isPrimary = form.image === url || (i === 0 && !form.image)
+                  const isDragTarget = carouselDragOver === i
+                  return (
+                    <div
+                      key={url + i}
+                      draggable
+                      onDragStart={() => onCarouselDragStart(i)}
+                      onDragOver={e => onCarouselDragOver(e, i)}
+                      onDrop={() => onCarouselDrop(i)}
+                      onDragEnd={() => { setCarouselDragIdx(null); setCarouselDragOver(null) }}
+                      className="group relative overflow-hidden rounded-xl transition-all duration-200 cursor-grab active:cursor-grabbing select-none"
+                      style={{
+                        aspectRatio: '1',
+                        border: isPrimary
+                          ? '2px solid rgba(167,139,250,0.85)'
+                          : isDragTarget
+                          ? '2px solid rgba(139,92,246,0.6)'
+                          : '1.5px solid rgba(255,255,255,0.07)',
+                        boxShadow: isPrimary ? '0 0 18px rgba(139,92,246,0.35)' : 'none',
+                        opacity: carouselDragIdx === i ? 0.35 : 1,
+                        transform: isDragTarget ? 'scale(1.05)' : 'none',
+                      }}
+                    >
+                      <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+
+                      {isPrimary && (
+                        <div className="absolute left-1.5 top-1.5 rounded-full bg-violet-600 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-lg">
+                          Capa
+                        </div>
+                      )}
+
+                      {/* ordem */}
+                      <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[9px] font-bold text-white/70">
+                        {i + 1}
+                      </div>
+
+                      {/* hover actions */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        {!isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => carouselSetPrimary(url)}
+                            className="rounded-lg bg-violet-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-violet-500 transition-colors shadow"
+                          >
+                            ★ Definir capa
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => carouselRemove(url)}
+                          className="rounded-lg bg-red-600/90 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-500 transition-colors shadow"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* add more slot */}
+                {(form.carousel_images ?? []).length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => carouselInputRef.current?.click()}
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/12 bg-transparent text-white/25 hover:border-violet-500/40 hover:text-violet-400 transition-all"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span className="text-[9px]">Adicionar</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              /* empty state */
+              <button
+                type="button"
+                onClick={() => carouselInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/12 bg-transparent py-8 text-white/25 hover:border-violet-500/35 hover:bg-violet-500/5 hover:text-violet-400 transition-all"
+              >
+                <ImageIcon className="h-9 w-9" />
+                <div className="text-center">
+                  <p className="text-sm font-semibold">Carrossel vazio</p>
+                  <p className="mt-0.5 text-xs">Clique ou solte até 10 fotos aqui</p>
+                </div>
+              </button>
+            )}
+          </div>
+
+          {/* Nome + Categoria */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Nome do Perfil</label>
+              <input value={form.name ?? ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Categoria (exibição)</label>
+              <input value={form.category ?? ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                placeholder="Ex: Salão de Beleza"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+          </div>
+
+          {/* Descrição */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-white/60">Descrição</label>
+            <textarea value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3}
+              placeholder="Descreva o perfil — inclua vantagens do VIP para atrair prestadores."
+              className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none" />
+          </div>
+
+          {/* Localização + Avaliações + Nota */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Localização</label>
+              <input value={form.location ?? ''} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Bairro, Imperatriz"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Nota (estrelas)</label>
+              <input type="number" min={1} max={5} step={0.1} value={form.rating ?? 5} onChange={e => setForm(f => ({ ...f, rating: parseFloat(e.target.value) }))}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-violet-500/50 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Nº de avaliações</label>
+              <input type="number" min={0} value={form.reviews ?? 0} onChange={e => setForm(f => ({ ...f, reviews: parseInt(e.target.value) }))}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-violet-500/50 focus:outline-none" />
+            </div>
+          </div>
+
+          {/* Contato */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Telefone</label>
+              <input value={form.phone ?? ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(99) 99999-0000"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">WhatsApp (com DDI, ex: 5599…)</label>
+              <input value={form.whatsapp ?? ''} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="5599999990000"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+          </div>
+
+          {/* Tema visual VIP */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white/60">Tema Visual do Perfil — 16 temas premium</label>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {DEMO_VIP_THEMES.map(t => {
+                const sel = (form.vip_theme_id ?? null) === t.id
+                return (
+                  <button
+                    key={String(t.id)}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, vip_theme_id: t.id }))}
+                    title={t.name}
+                    className="flex flex-col items-center gap-1 rounded-xl p-2 text-center transition-all"
+                    style={{
+                      background: sel ? `${t.primary}22` : 'rgba(255,255,255,0.04)',
+                      border: `1.5px solid ${sel ? t.primary : 'rgba(255,255,255,0.08)'}`,
+                      boxShadow: sel ? `0 0 10px ${t.primary}55` : 'none',
+                    }}
+                  >
+                    <span className="text-xl leading-none">{t.emoji}</span>
+                    <span className="text-[9px] font-semibold leading-tight" style={{ color: sel ? t.primary : 'rgba(255,255,255,0.4)' }}>
+                      {t.name.split(' ')[0]}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-white/25">
+              Tema selecionado: <span className="font-semibold text-white/50">{DEMO_VIP_THEMES.find(t => t.id === (form.vip_theme_id ?? null))?.name ?? 'Original'}</span>
+            </p>
+          </div>
+
+          {/* Badge VIP (tema) */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white/60">Badge do Perfil</label>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_BADGE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, vip_badge_type: opt.value }))}
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold transition-all"
+                  style={{
+                    background: form.vip_badge_type === opt.value ? opt.bg : 'rgba(255,255,255,0.05)',
+                    border: `1.5px solid ${form.vip_badge_type === opt.value ? opt.border : 'rgba(255,255,255,0.1)'}`,
+                    color: form.vip_badge_type === opt.value ? opt.border : 'rgba(255,255,255,0.4)',
+                    boxShadow: form.vip_badge_type === opt.value ? `0 0 12px ${opt.border}40` : 'none',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ativo toggle */}
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setForm(f => ({ ...f, active: !f.active }))}
+              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors">
+              {form.active
+                ? <ToggleRight className="h-6 w-6 text-green-400" />
+                : <ToggleLeft className="h-6 w-6 text-white/30" />}
+              {form.active ? 'Perfil visível no site' : 'Perfil oculto'}
+            </button>
+          </div>
+
+          {/* Botões */}
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setEditId(null)}
+              className="flex-1 rounded-xl border border-white/10 py-3 text-sm text-white/60 hover:bg-white/5 transition-all">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-all">
+              {saving
+                ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</span>
+                : 'Salvar Alterações'}
+            </button>
+          </div>
+        </form>
+      </div>
+    )
+  }
+
+  /* ── LISTA ── */
+  return (
+    <div>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="font-bold text-white">Perfis Demonstrativos</h2>
+          <p className="text-sm text-white/40">{demos.filter(d => d.active).length} perfil(s) visíveis • funcionam como vitrine VIP do site</p>
+        </div>
+        <button onClick={fetchDemos} className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-white/50 hover:bg-white/5 hover:text-white transition-all">
+          <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {demos.map(d => {
+          const color = badgeColor[d.vip_badge_type] ?? '#fbbf24'
+          return (
+            <div
+              key={d.id}
+              className={`relative flex flex-col overflow-hidden rounded-2xl border bg-white/5 transition-all hover:bg-white/8 ${!d.active ? 'opacity-40' : ''}`}
+              style={{ borderColor: `${color}40` }}
+            >
+              {/* Thumbnail */}
+              <div className="relative h-28 overflow-hidden bg-black/30">
+                {d.image
+                  ? <img src={d.image} alt={d.name} className="h-full w-full object-cover" />
+                  : <div className="flex h-full items-center justify-center text-4xl text-white/10">{d.name[0]}</div>
+                }
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                {/* Badge indicator */}
+                <span
+                  className="absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  style={{ background: `${color}25`, border: `1px solid ${color}60`, color }}
+                >
+                  {DEMO_BADGE_OPTIONS.find(o => o.value === d.vip_badge_type)?.label ?? d.vip_badge_type}
+                </span>
+                {!d.active && (
+                  <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white/50">
+                    Oculto
+                  </span>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex flex-1 flex-col gap-1.5 p-3">
+                <p className="font-semibold text-white text-sm leading-snug">{d.name}</p>
+                <p className="text-xs font-medium" style={{ color }}>{d.category}</p>
+                <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed">{d.description}</p>
+                <div className="mt-1 flex items-center gap-2 text-[11px] text-white/30">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-yellow-400 font-bold text-[11px]">{d.rating}</span>
+                  <span>({d.reviews} aval.)</span>
+                  {d.location && <><span>·</span><span>{d.location}</span></>}
+                </div>
+              </div>
+
+              {/* Edit button */}
+              <button
+                onClick={() => openEdit(d)}
+                className="flex w-full items-center justify-center gap-2 border-t py-2.5 text-xs font-semibold transition-all hover:bg-white/5"
+                style={{ borderColor: `${color}25`, color }}
+              >
+                <Edit3 className="h-3.5 w-3.5" /> Editar Perfil
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-white/8 bg-white/3 p-4">
+        <p className="text-xs text-white/35 leading-relaxed">
+          <strong className="text-white/55">Como funciona:</strong> estes perfis servem como vitrine VIP do site para atrair novos prestadores.
+          Cada um tem um tema de cor diferente baseado no badge selecionado. As alterações são salvas no banco e aparecem imediatamente no site.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   FINANCEIRO TAB
+═══════════════════════════════════════════════════ */
+
+type PaymentRow = {
+  id: string; user_id: string; provider_name: string | null; provider_slug: string | null
+  amount_cents: number; reference_id: string | null; paid_at: string; plan_expires_at: string | null
+}
+
+type VipProviderRow = {
+  id: string; name: string; slug: string; plan: string
+  plan_expires_at: string | null; vip_badge_type: string | null; user_id: string; created_at: string
+}
+
+const SQL_PAYMENTS = `-- Execute no Supabase SQL Editor:
+CREATE TABLE IF NOT EXISTS vip_payments (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id text NOT NULL,
+  provider_name text,
+  provider_slug text,
+  amount_cents int DEFAULT 799,
+  reference_id text,
+  paid_at timestamptz DEFAULT now(),
+  plan_expires_at timestamptz
+);
+
+-- Adiciona colunas extras ao demo_providers (se ainda não tiver):
+ALTER TABLE demo_providers ADD COLUMN IF NOT EXISTS vip_theme_id text DEFAULT NULL;
+ALTER TABLE demo_providers ADD COLUMN IF NOT EXISTS avatar_image text DEFAULT NULL;
+ALTER TABLE demo_providers ADD COLUMN IF NOT EXISTS carousel_images jsonb DEFAULT '[]'::jsonb;`
+
+function FinanceiroTab() {
+  const [data, setData]       = useState<{ payments: PaymentRow[]; vipProviders: VipProviderRow[]; totalBrl: string; totalTransactions: number; tableExists: boolean } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showSql, setShowSql] = useState(false)
+  const [toast, setToast]     = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/admin/financeiro')
+      const json = await res.json()
+      setData(json)
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  function fmtBrl(cents: number) {
+    return `R$ ${(cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  }
+
+  function isExpired(expiresAt: string | null) {
+    if (!expiresAt) return false
+    return new Date(expiresAt) < new Date()
+  }
+
+  if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-7 w-7 animate-spin text-violet-400" /></div>
+  if (!data)   return null
+
+  return (
+    <div className="space-y-6">
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* ── KPI cards ── */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Receita Total</p>
+          <p className="mt-2 text-3xl font-black text-white">R$ {parseFloat(data.totalBrl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="mt-1 text-xs text-white/40">{data.totalTransactions} pagamento(s) confirmado(s)</p>
+        </div>
+        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-400">VIP Ativos</p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {data.vipProviders.filter(p => !isExpired(p.plan_expires_at)).length}
+          </p>
+          <p className="mt-1 text-xs text-white/40">prestadores com plano ativo</p>
+        </div>
+        <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-violet-400">Ticket Médio</p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {data.totalTransactions > 0 ? fmtBrl(Math.round(parseFloat(data.totalBrl) * 100 / data.totalTransactions)) : 'R$ 0,00'}
+          </p>
+          <p className="mt-1 text-xs text-white/40">por assinatura</p>
+        </div>
+      </div>
+
+      {/* ── SQL alert se tabela não existe ── */}
+      {!data.tableExists && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-400 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-white text-sm">Tabela de pagamentos não encontrada</p>
+              <p className="mt-1 text-xs text-white/55">Crie a tabela <code className="rounded bg-white/10 px-1 text-amber-300">vip_payments</code> no Supabase para registrar os pagamentos automaticamente.</p>
+              <button onClick={() => setShowSql(!showSql)} className="mt-2 text-xs text-amber-400 underline hover:text-amber-300">
+                {showSql ? 'Ocultar SQL' : 'Ver SQL →'}
+              </button>
+              {showSql && <pre className="mt-2 overflow-x-auto rounded-xl bg-black/40 p-3 text-xs text-green-300 border border-white/10">{SQL_PAYMENTS}</pre>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Histórico de Pagamentos ── */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-bold text-white">Histórico de Pagamentos VIP</h2>
+          <button onClick={load} className="flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white/50 hover:bg-white/5 hover:text-white">
+            <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+          </button>
+        </div>
+        {data.payments.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-white/10 py-14 text-center">
+            <Award className="h-8 w-8 text-white/15" />
+            <p className="text-sm text-white/35">Nenhum pagamento registrado ainda.</p>
+            <p className="text-xs text-white/20">Os pagamentos aparecerão aqui após o PagBank confirmar via webhook.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/5">
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-white/40">Prestador</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-white/40">User ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-white/40">Valor</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-white/40">Pago em</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-white/40">VIP até</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-white/40">Ref. PagBank</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.payments.map((p, i) => (
+                  <tr key={p.id} className={`border-b border-white/5 transition-colors hover:bg-white/4 ${i % 2 === 0 ? '' : 'bg-white/2'}`}>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-white">{p.provider_name ?? '—'}</p>
+                      {p.provider_slug && <p className="text-xs text-white/30">/{p.provider_slug}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <code className="rounded bg-white/8 px-1.5 py-0.5 text-xs text-violet-300">{p.user_id.slice(0, 8)}…</code>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-emerald-400">{fmtBrl(p.amount_cents)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/50">{fmt(p.paid_at)}</td>
+                    <td className="px-4 py-3">
+                      {p.plan_expires_at
+                        ? <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isExpired(p.plan_expires_at) ? 'bg-red-500/15 text-red-400' : 'bg-emerald-500/15 text-emerald-400'}`}>
+                            {isExpired(p.plan_expires_at) ? 'Expirado' : fmt(p.plan_expires_at)}
+                          </span>
+                        : <span className="text-white/25 text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <code className="text-xs text-white/25">{p.reference_id?.slice(0, 20) ?? '—'}…</code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Prestadores VIP ── */}
+      <div>
+        <h2 className="mb-3 font-bold text-white">Prestadores com Plano VIP/Premium</h2>
+        {data.vipProviders.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-white/10 py-10 text-center">
+            <Users className="h-8 w-8 text-white/15" />
+            <p className="text-sm text-white/35">Nenhum prestador VIP encontrado.</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {data.vipProviders.map(p => {
+              const expired = isExpired(p.plan_expires_at)
+              return (
+                <div key={p.id} className={`rounded-2xl border p-4 ${expired ? 'border-red-500/20 bg-red-500/5 opacity-60' : 'border-amber-500/25 bg-amber-500/5'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-white">{p.name}</p>
+                      <p className="text-xs text-white/40">/{p.slug}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${expired ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                      {expired ? 'Expirado' : p.plan.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-white/40">
+                      <Users className="h-3 w-3" />
+                      <code className="text-violet-300">{p.user_id.slice(0, 12)}…</code>
+                    </div>
+                    {p.plan_expires_at && (
+                      <div className="flex items-center gap-2 text-xs text-white/40">
+                        <Calendar className="h-3 w-3" />
+                        VIP até: <span className={expired ? 'text-red-400' : 'text-emerald-400'}>{fmt(p.plan_expires_at)}</span>
+                      </div>
+                    )}
+                    {!p.plan_expires_at && (
+                      <div className="flex items-center gap-2 text-xs text-emerald-400">
+                        <Award className="h-3 w-3" /> VIP Vitalício
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+

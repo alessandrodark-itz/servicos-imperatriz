@@ -4,7 +4,8 @@ import Footer from '@/components/Footer'
 import ProviderCard from '@/components/ProviderCard'
 import SectionHeader from '@/components/SectionHeader'
 import { providers as mockProviders, categories } from '@/lib/mock-data'
-import { isPremiumActive } from '@/lib/plans'
+import { createAdmin } from '@/lib/supabase'
+import { isVip } from '@/lib/plans'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,9 +15,8 @@ async function getAllDbProviders() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase.from('providers') as any)
-      .select('id, name, slug, categories, description, cover_url, phone, whatsapp, location, created_at, plan, plan_expires_at')
+      .select('id, name, slug, categories, description, cover_url, phone, whatsapp, location, created_at, plan, plan_expires_at, vip_badge_type, updated_at')
       .eq('active', true)
       .order('created_at', { ascending: false })
     return (data ?? []) as any[]
@@ -25,10 +25,53 @@ async function getAllDbProviders() {
   }
 }
 
+async function getDemoProviders() {
+  try {
+    const { data } = await createAdmin()
+      .from('demo_providers')
+      .select('*')
+      .eq('active', true)
+      .order('id', { ascending: true })
+    return (data ?? []) as any[]
+  } catch {
+    return []
+  }
+}
+
+function mapDemoToProvider(p: any) {
+  return {
+    id:            p.id,
+    name:          p.name,
+    slug:          p.slug,
+    category:      p.category,
+    categorySlug:  p.category_slug,
+    rating:        p.rating ?? 5.0,
+    reviews:       p.reviews ?? 0,
+    description:   p.description ?? '',
+    image:         p.image ?? '',
+    phone:         p.phone ?? '',
+    whatsapp:      p.whatsapp ?? '',
+    location:      p.location ?? '',
+    featured:      true,
+    plan:          'vip',
+    planExpiresAt: null,
+    vipBadgeType:  p.vip_badge_type ?? 'vip',
+    updatedAt:     p.updated_at ?? null,
+  }
+}
+
 export default async function PrestadoresPage() {
-  const dbProviders = await getAllDbProviders()
+  const [dbProviders, dbDemos] = await Promise.all([getAllDbProviders(), getDemoProviders()])
+
   const dbSlugs = new Set(dbProviders.map((p: any) => p.slug))
-  const filteredMock = mockProviders.filter((p) => !dbSlugs.has(p.slug))
+
+  // use DB demos if available, else fall back to hardcoded mock
+  const demoProviders = dbDemos.length > 0
+    ? dbDemos.map(mapDemoToProvider)
+    : mockProviders.map(p => ({ ...p, featured: true }))
+
+  // filter out demos that are already real providers in the DB
+  const filteredDemos = demoProviders.filter((p: any) => !dbSlugs.has(p.slug))
 
   const mappedDb = dbProviders.map((p: any) => {
     const catId = p.categories?.[0]
@@ -49,17 +92,19 @@ export default async function PrestadoresPage() {
       featured:      false,
       plan:          p.plan          ?? 'free',
       planExpiresAt: p.plan_expires_at ?? null,
+      vipBadgeType:  p.vip_badge_type ?? null,
+      updatedAt:     p.updated_at    ?? null,
     }
   })
 
-  // Premium providers appear first
-  mappedDb.sort((a: any, b: any) => {
-    const aP = isPremiumActive(a.plan, a.planExpiresAt) ? 1 : 0
-    const bP = isPremiumActive(b.plan, b.planExpiresAt) ? 1 : 0
-    return bP - aP
-  })
+  function isMinimallyComplete(p: any) {
+    const name = p.name?.trim() ?? ''
+    return name.length > 2 && name !== 'Prestador' && (p.whatsapp || p.phone)
+  }
 
-  const allProviders = [...mappedDb, ...filteredMock]
+  const vipProviders  = [...mappedDb.filter((p: any) => isVip(p.plan, p.planExpiresAt)), ...filteredDemos]
+  const freeProviders = mappedDb.filter((p: any) => !isVip(p.plan, p.planExpiresAt) && isMinimallyComplete(p))
+  const allProviders  = [...freeProviders]
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -85,11 +130,38 @@ export default async function PrestadoresPage() {
           </div>
         </section>
 
+        {/* VIP section */}
+        {vipProviders.length > 0 && (
+          <section className="px-4 pb-10">
+            <div className="mx-auto max-w-7xl">
+              <div className="mb-6 flex items-center gap-3">
+                <div
+                  className="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold"
+                  style={{
+                    background: 'rgba(251,191,36,0.1)',
+                    border: '1px solid rgba(251,191,36,0.3)',
+                    color: '#fbbf24',
+                  }}
+                >
+                  <span>👑</span>
+                  Profissionais VIP
+                </div>
+                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(251,191,36,0.3), transparent)' }} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {vipProviders.map((provider: any) => (
+                  <ProviderCard key={provider.id} provider={provider} variant="default" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="px-4 py-8 pb-16">
           <div className="mx-auto max-w-7xl">
             <SectionHeader
               title="Profissionais Disponíveis"
-              subtitle={`${allProviders.length} prestadores cadastrados`}
+              subtitle={`${allProviders.length + vipProviders.length} prestadores disponíveis`}
             />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {allProviders.map((provider) => (
