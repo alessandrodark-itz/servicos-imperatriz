@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PAGBANK_API   = process.env.PAGBANK_API_URL ?? 'https://sandbox.api.pagseguro.com'
-const PAGBANK_TOKEN = process.env.PAGBANK_TOKEN   ?? ''
+const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN ?? ''
 
 export async function GET(req: NextRequest) {
   const orderId = req.nextUrl.searchParams.get('orderId')
@@ -10,9 +9,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${PAGBANK_API}/orders/${orderId}`, {
-      headers: { Authorization: `Bearer ${PAGBANK_TOKEN}` },
-      cache: 'no-store',
+    const res = await fetch(`https://api.mercadopago.com/v1/payments/${orderId}`, {
+      headers: { Authorization: `Bearer ${MP_TOKEN}` },
+      cache:   'no-store',
     })
 
     if (!res.ok) {
@@ -20,9 +19,7 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json()
-    const isPaid = (data.charges ?? []).some(
-      (c: { status: string }) => c.status === 'PAID',
-    )
+    const isPaid = data.status === 'approved'
 
     return NextResponse.json({ isPaid, status: data.status ?? 'unknown' })
 

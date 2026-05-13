@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { createBrowser } from '@/lib/supabase'
+import { validarSenhaForte } from '@/lib/validarSenha'
 import { categories } from '@/lib/mock-data'
 import {
   User, Mail, Phone, MapPin, Briefcase, FileText,
@@ -60,9 +61,8 @@ export default function PrestadorCadastroPage() {
     if (formData.password !== formData.confirmPassword) {
       setError('As senhas não coincidem'); return
     }
-    if (formData.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres'); return
-    }
+    const { valida, erros } = validarSenhaForte(formData.password)
+    if (!valida) { setError(erros[0]); return }
     if (!formData.category) {
       setError('Selecione uma categoria'); return
     }

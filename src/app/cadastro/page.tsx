@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { createBrowser } from '@/lib/supabase'
+import { validarSenhaForte } from '@/lib/validarSenha'
 import {
   Mail, Lock, User, Phone, Eye, EyeOff,
   AlertCircle, CheckCircle, Loader2, Briefcase, ArrowLeft, RefreshCw,
@@ -124,8 +125,12 @@ export default function CadastroPage() {
     else if (nameStatus === 'checking')     e.name            = 'Aguarde a verificação do nome'
     if (!formData.email.trim())             e.email           = 'E-mail obrigatório'
     else if (!isValidEmail(formData.email)) e.email           = 'E-mail inválido'
-    if (!formData.password)                 e.password        = 'Senha obrigatória'
-    else if (formData.password.length < 8)  e.password        = 'Mínimo de 8 caracteres'
+    if (!formData.password) {
+      e.password = 'Senha obrigatória'
+    } else {
+      const { valida, erros } = validarSenhaForte(formData.password)
+      if (!valida) e.password = erros[0]
+    }
     if (!formData.confirmPassword)          e.confirmPassword = 'Confirmação obrigatória'
     else if (formData.password !== formData.confirmPassword)
       e.confirmPassword = 'Senhas não conferem'

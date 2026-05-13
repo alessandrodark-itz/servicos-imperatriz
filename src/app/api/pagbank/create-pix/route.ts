@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
 
-const PAGBANK_API   = process.env.PAGBANK_API_URL  ?? 'https://sandbox.api.pagseguro.com'
-const PAGBANK_TOKEN = process.env.PAGBANK_TOKEN    ?? ''
-const SITE_URL      = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.servitz.com.br'
-const VIP_CENTS     = 799 // R$ 7,99
+const MP_TOKEN  = process.env.MERCADOPAGO_ACCESS_TOKEN ?? ''
+const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.servitz.com.br'
+const VIP_AMOUNT = 7.99 // R$ 7,99
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +19,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'CPF inválido' }, { status: 400 })
     }
 
-    // Busca e-mail real do usuário via service role
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -28,66 +26,71 @@ export async function POST(req: NextRequest) {
     const { data: authUser } = await supabase.auth.admin.getUserById(userId)
     const email = authUser?.user?.email ?? `pay${Date.now()}@servitz.com.br`
 
-    // Expira em 1 hora
-    const expiration = new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    // reference_id: VIP_{userId}_{timestamp}  — sem conflito pois UUID usa "-" e nós usamos "_"
     const referenceId = `VIP_${userId}_${Date.now()}`
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
-    const orderBody = {
-      reference_id: referenceId,
-      customer: {
-        name:   customerName.trim(),
+    const nameParts = customerName.trim().split(' ')
+    const firstName = nameParts[0]
+    const lastName  = nameParts.slice(1).join(' ') || firstName
+
+    const notificationUrl = process.env.MERCADOPAGO_WEBHOOK_SECRET
+      ? `${SITE_URL}/api/pagbank/webhook?key=${process.env.MERCADOPAGO_WEBHOOK_SECRET}`
+      : `${SITE_URL}/api/pagbank/webhook`
+
+    const paymentBody = {
+      transaction_amount: VIP_AMOUNT,
+      payment_method_id:  'pix',
+      payer: {
         email,
-        tax_id: cpf,
+        first_name: firstName,
+        last_name:  lastName,
+        identification: { type: 'CPF', number: cpf },
       },
-      items: [{
-        reference_id: 'vip-30d',
-        name:         'Plano VIP Serv-Itz — 30 dias',
-        quantity:     1,
-        unit_amount:  VIP_CENTS,
-      }],
-      qr_codes: [{
-        amount:          { value: VIP_CENTS },
-        expiration_date: expiration,
-      }],
-      notification_urls: [`${SITE_URL}/api/pagbank/webhook`],
+      description:        'Plano VIP Serv-Itz — 30 dias',
+      external_reference: referenceId,
+      notification_url:   notificationUrl,
+      date_of_expiration: expiresAt,
     }
 
-    const res = await fetch(`${PAGBANK_API}/orders`, {
-      method: 'POST',
+    const res = await fetch('https://api.mercadopago.com/v1/payments', {
+      method:  'POST',
       headers: {
-        Authorization:  `Bearer ${PAGBANK_TOKEN}`,
-        'Content-Type': 'application/json',
+        Authorization:       `Bearer ${MP_TOKEN}`,
+        'Content-Type':      'application/json',
+        'X-Idempotency-Key': referenceId,
       },
-      body: JSON.stringify(orderBody),
+      body: JSON.stringify(paymentBody),
     })
 
     const data = await res.json()
 
     if (!res.ok) {
-      console.error('PagBank error:', JSON.stringify(data))
-      const msg = data?.error_messages?.[0]?.description ?? 'Erro ao gerar cobrança PIX'
+      console.error('Mercado Pago error:', JSON.stringify(data))
+      const msg = data?.message ?? data?.cause?.[0]?.description ?? 'Erro ao gerar cobrança PIX'
       return NextResponse.json({ error: msg }, { status: 500 })
     }
 
-    const qr = data.qr_codes?.[0]
-    if (!qr?.text) {
-      return NextResponse.json({ error: 'PIX não retornado pelo PagBank' }, { status: 500 })
+    const pixCode  = data.point_of_interaction?.transaction_data?.qr_code
+    const qrBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
+
+    if (!pixCode) {
+      return NextResponse.json({ error: 'PIX não retornado pelo Mercado Pago' }, { status: 500 })
     }
 
-    // Gera QR code como base64 (evita dependência de URL com auth)
-    const qrCodeDataUrl = await QRCode.toDataURL(qr.text, {
-      width:  280,
-      margin: 2,
-      color:  { dark: '#0d0520', light: '#ffffff' },
-    })
+    const qrCodeDataUrl = qrBase64
+      ? `data:image/png;base64,${qrBase64}`
+      : await QRCode.toDataURL(pixCode, {
+          width:  280,
+          margin: 2,
+          color:  { dark: '#0d0520', light: '#ffffff' },
+        })
 
     return NextResponse.json({
-      orderId:      data.id,
-      referenceId:  data.reference_id,
-      pixCode:      qr.text,
+      orderId:      String(data.id),
+      referenceId,
+      pixCode,
       qrCodeDataUrl,
-      expiresAt:    qr.expiration_date,
+      expiresAt:    data.date_of_expiration ?? expiresAt,
     })
 
   } catch (err) {

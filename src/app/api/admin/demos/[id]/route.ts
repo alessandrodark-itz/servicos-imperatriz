@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { createAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/require-admin'
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const deny = requireAdmin(req)
+  if (deny) return deny
+
   const { id } = await params
   const body = await req.json()
   const supabase = createAdmin()
