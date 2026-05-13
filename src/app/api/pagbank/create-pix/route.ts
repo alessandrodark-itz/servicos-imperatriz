@@ -7,6 +7,7 @@ const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.servitz.com.b
 const VIP_AMOUNT = 7.99 // R$ 7,99
 
 export async function POST(req: NextRequest) {
+  console.log('[create-pix] token prefix:', MP_TOKEN.slice(0, 15), '| len:', MP_TOKEN.length)
   try {
     const { customerName, customerCpf, userId } = await req.json()
 
